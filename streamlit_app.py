@@ -3,7 +3,7 @@ import pandas as pd
 import os
 
 st.set_page_config(page_title="SensorIQ", page_icon="🦷")
-st.title("🦷 SensorIQ: Dental Imaging Support")
+st.title("🦷 Jazz Sensor Image Quality Assistant")
 
 # --- DEBUGGING SECTION ---
 # This part helps us see what files are actually there
@@ -34,4 +34,4 @@ if not match.empty:
         st.balloons()
         st.success("Great! This success has been noted.")
 else:
-    st.warning("No specific recommendation found yet. Try a different goal!")
+    st.warning("No specific recommendation found yet. Try a different setup!")
