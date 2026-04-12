@@ -66,7 +66,7 @@ if user_feedback:
         
         try:
             response = client.messages.create(
-                model="claude-3-5-sonnet-20240620",
+                model="claude-haiku-4-5-20251001", # Updated to the latest model
                 max_tokens=400,
                 messages=[{"role": "user", "content": prompt}]
             )
