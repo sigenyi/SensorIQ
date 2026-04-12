@@ -34,4 +34,4 @@ if not match.empty:
         st.balloons()
         st.success("Great! This success has been noted.")
 else:
-    st.warning("No specific recommendation found yet. Try a different setup!")
+    st.warning("No specific recommendation found yet. Try a different setup! (or ask Andrea)")
