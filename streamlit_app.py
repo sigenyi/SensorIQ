@@ -48,21 +48,23 @@ st.divider()
 
 # --- INTERACTIVE TROUBLESHOOTING ---
 st.write("### 💬 Refine Image Quality")
-user_feedback = st.text_input("Describe the issue (e.g., 'The image is too dark', 'It looks grainy')")
 
-if user_feedback:
+# Use a form to prevent accidental re-runs
+with st.form("ai_form"):
+    user_feedback = st.text_input("Describe the issue:")
+    submit_button = st.form_submit_button("Analyze Issue")
+
+if submit_button and user_feedback:
     with st.spinner("Consulting Jazz Sensor Knowledge Base..."):
         prompt = f"""
         <system_instruction>
         You are the 'Dentistry XRAY Sensor Technical Lead'. 
-        Provide ONLY high-impact, technical imaging troubleshooting steps.
+        Provide ONLY high-impact, technical imaging troubleshooting steps. 
         - Base recommendations on standardized radiologic principles.
         - DO NOT include conversational filler, intros, or "Quick Tips".
-        - DO NOT include follow-up questions like "Would you like more guidance?".
+        - DO NOT include follow-up questions.
         - Format as: **Issue**, followed by a numbered list of **Actions**.
-        - Use the specific technical names for settings from these guides:
-        Guide 1: {settings_guide}
-        Guide 2: {quick_guide}
+        - Use specific technical names from: {settings_guide} and {quick_guide}.
         </system_instruction>
 
         <context>
@@ -73,13 +75,13 @@ if user_feedback:
         
         try:
             response = client.messages.create(
-                model="claude-haiku-4-5-20251001", # Updated to the latest model
-                max_tokens=400,
+                model="claude-haiku-4-5-20251001",
+                max_tokens=500, # Increased so it doesn't cut off mid-sentence
                 messages=[{"role": "user", "content": prompt}]
             )
             st.success(f"**Jazz Support AI:** \n\n {response.content[0].text}")
         except Exception as e:
-            st.error(f"Could not connect to AI. Check your API key and credits. Error: {e}")
+            st.error(f"Error: {e}")
 
         if st.button("🚀 This worked! Log success"):
             st.toast("Success logged! The system is learning.")
