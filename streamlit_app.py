@@ -53,15 +53,22 @@ user_feedback = st.text_input("Describe the issue (e.g., 'The image is too dark'
 if user_feedback:
     with st.spinner("Consulting Jazz Sensor Knowledge Base..."):
         prompt = f"""
-        You are the 'Jazz Sensor Image Quality Assistant'. 
-        Reference these guides if available:
+        <system_instruction>
+        You are the 'Dentistry XRAY Sensor Technical Lead'. 
+        Provide ONLY high-impact, technical imaging troubleshooting steps.
+        - Base recommendations on standardized radiologic principles.
+        - DO NOT include conversational filler, intros, or "Quick Tips".
+        - DO NOT include follow-up questions like "Would you like more guidance?".
+        - Format as: **Issue**, followed by a numbered list of **Actions**.
+        - Use the specific technical names for settings from these guides:
         Guide 1: {settings_guide}
         Guide 2: {quick_guide}
-        
-        The technician is using {software} and a {machine}.
-        The feedback is: "{user_feedback}".
-        
-        Provide a concise, professional recommendation for the technician to improve the image.
+        </system_instruction>
+
+        <context>
+        Software: {software} | X-ray: {machine}
+        Issue: "{user_feedback}"
+        </context>
         """
         
         try:
