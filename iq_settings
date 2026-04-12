@@ -1,0 +1,3 @@
+machine,software,version,goal,details,success_count
+Hand-gun,Dexis,10.0,Higher Sharpness,"Set Gamma to 1.1, Gain to 4",1
+Wall-mounted,Schick,5.2,Clearer Bone,"Enable Perio Filter, Contrast 70%",1
