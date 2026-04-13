@@ -9,9 +9,10 @@
 - High Percentile: Ceiling for white levels. Range [99 - 100]; Default: 99.
 - Function: Trims outlying/empty data to expand "heavy" data across full histogram. Vital for low-dosage captures.
 - S-Curve: (Enables Data Compression): Controls inclusion of histogram "tails" (outlying data that was removed by the Low Percentile and High Percentile).
-- S- Curve Scale (Weight): Range [0.10 - 0.90]; Default: 0.20. 
-    - Low Value (0.20): Steeper curve. Grabs LESS empty data. Normalization remains effective.
-    - High Value (0.90): Flatter curve. Grabs/compresses almost all empty data, rendering Adaptive Normalization clipping useless.
+- Scale (Weight) Logic:
+    - LOW SCALE (0.10 - 0.30): "Standard Mode". Steeper curve. Effectively clips empty data. Best for standard caries/bone checks. [cite: 11]
+    - HIGH SCALE (0.70 - 0.90): "Fracture Detection Mode". Flatter curve. Intentionally re-introduces "empty" data tails previously clipped.
+- FRACTURE VISUALIZATION: High scale (0.90) allows visualization of hairline cracks/fractures that are usually "blown out" by standard normalization. Must be paired with Gamma adjustments to see detail.
 
 # 2. IMAGE ROTATION & INTEGRATION BEHAVIOR
 - BEHAVIOR RULE: 
