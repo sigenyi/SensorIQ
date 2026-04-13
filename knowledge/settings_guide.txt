@@ -1,0 +1,36 @@
+# JAZZ SENSOR GLOBAL CONFIGURATION
+- 2x2 Binning: Combines 4 pixels to 1. Increases sensitivity/brightness; decreases resolution. Use only for weak X-ray sources.
+- Resend Last Image: Reprocesses previous capture with current settings.
+- Processing Chain: Noise Filter > Normalize/CLAHE > Sharpen > Gamma > Out.
+
+# 1. ADAPTIVE NORMALIZATION & S-CURVE LOGIC
+- Enable: Activates global histogram stretching.
+- Low Percentile: Floor for black levels. Range [1.00 - 5.00]; Default: 1.
+- High Percentile: Ceiling for white levels. Range [99 - 100]; Default: 99.
+- Function: Trims outlying/empty data to expand "heavy" data across full histogram. Vital for low-dosage captures.
+- S-Curve: (Enables Data Compression): Controls inclusion of histogram "tails" (outlying data that was removed by the Low Percentile and High Percentile).
+- S- Curve Scale (Weight): Range [0.10 - 0.90]; Default: 0.20. 
+    - Low Value (0.20): Steeper curve. Grabs LESS empty data. Normalization remains effective.
+    - High Value (0.90): Flatter curve. Grabs/compresses almost all empty data, rendering Adaptive Normalization clipping useless.
+
+# 2. IMAGE ROTATION & INTEGRATION BEHAVIOR
+- TWAIN Integration: Rotation/Flip settings in this tool WILL affect the final image in the imaging software.
+- FUSE Integration (Native): Host software will DISCARD these rotation settings and emulate native sensor rotation logic.
+
+# 3. CLAHE (LOCALIZED CONTRAST)
+- Clip Limit: Max contrast enhancement. Range [1.50 - 2.50]; Default: 2.00.
+- Num Regions X/Y: Grid tiles for local optimization. Range [4 - 8]; Default: 6x6.
+
+# 4. IMAGE SHARPENING (EDGE ENHANCEMENT)
+- Sigma: Blur radius. Range [2.0 - 10.0]; Default: 2.0.
+- Weight: Sharpening strength. Range [0.55 - 1.50]; Default: 0.65.
+
+# 5. GAMMA & MANUAL ADJUSTMENTS
+- Gamma Level: Mid-tone luminance. Range [.35 - .85]; Default: 0.65.
+- Manual Contrast: Range [0.00 - 0.10]; Default: 0.00.
+- Manual Brightness: Range [-0.10 - 0.10]; Default: 0.00.
+
+# 6. OUTPUT & TWAIN
+- Invert: Toggles radiopaque (white bone) vs radiolucent (black bone).
+- TWAIN Multiple: Allows multi-frame acquisition.
+- TWAIN Wait: Forces trigger wait between frames.
