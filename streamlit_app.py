@@ -16,15 +16,15 @@ except:
 conn = st.connection("gsheets", type=GSheetsConnection)
 
 def log_to_google_sheets(software, machine, issue, resolution):
-    """Appends success data to the linked Google Sheet."""
+    """Appends data using the same column names as iq_settings.csv"""
     new_entry = pd.DataFrame([{
-        "Timestamp": datetime.now().strftime("%Y-%m-%d %H:%M:%S"),
-        "Software": software,
-        "Machine": machine,
-        "Issue": issue,
-        "Resolution": resolution
+        "machine": machine,
+        "software": software,
+        "issue": issue,      # Now matches the column name
+        "settings": resolution, # We rename 'resolution' to 'settings' to match
+        "notes": datetime.now().strftime("%Y-%m-%d") # Use notes for the date
     }])
-    # Fetch existing data, add new row, and update sheet
+    
     existing_data = conn.read()
     updated_df = pd.concat([existing_data, new_entry], ignore_index=True)
     conn.update(data=updated_df)
