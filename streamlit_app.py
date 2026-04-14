@@ -12,6 +12,7 @@ except:
     st.error("Missing CLAUDE_KEY in Streamlit Secrets!")
 
 # --- 2. DATA CONNECTIONS ---
+# Initialize connection with ttl=0 to disable caching (ensures live updates)
 conn = st.connection("gsheets", type=GSheetsConnection)
 
 def log_to_google_sheets(software, machine, issue, settings):
@@ -24,19 +25,26 @@ def log_to_google_sheets(software, machine, issue, settings):
         "notes": f"Logged via Assistant: {datetime.now().strftime('%Y-%m-%d')}"
     }])
     
-    # Logic to fetch and append
-    try:
-        existing_data = conn.read()
-        updated_df = pd.concat([existing_data, new_entry], ignore_index=True)
-        conn.update(data=updated_df)
-    except Exception as e:
-        st.error(f"Failed to log to Google Sheets: {e}")
+    # 1. Read current data using the explicit URL from secrets
+    sheet_url = st.secrets["connections"]["gsheets"]["spreadsheet"]
+    existing_data = conn.read(spreadsheet=sheet_url)
+    
+    # 2. Append the new row
+    updated_df = pd.concat([existing_data, new_entry], ignore_index=True)
+    
+    # 3. Push back to Google Sheets
+    conn.update(spreadsheet=sheet_url, data=updated_df)
+    
+    # 4. Clear cache to ensure the next session sees the updated sheet
+    st.cache_data.clear()
 
 def clear_and_reset():
-    """Clears inputs and session state to start fresh."""
-    st.session_state.pop('current_ai_response', None)
-    st.session_state.pop('last_issue', None)
-    # Note: 'user_input' key is handled by the widget key assignment
+    """Clears AI response and input to start from zero."""
+    if 'current_ai_response' in st.session_state:
+        del st.session_state['current_ai_response']
+    if 'last_issue' in st.session_state:
+        del st.session_state['last_issue']
+    # 'user_input' is handled by the widget key
     st.toast("System Reset - Parameters Cleared")
 
 # --- 3. LOAD BASELINE DATA ---
