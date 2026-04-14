@@ -132,7 +132,7 @@ if st.button("Analyze Image Issue"):
             try:
                 response = client.messages.create(
                     model="claude-haiku-4-5-20251001",
-                    max_tokens=200, # Tightened limit to save tokens
+                    max_tokens=300, # Tightened limit to save tokens
                     messages=[{"role": "user", "content": prompt}]
                 )
                 st.session_state['current_ai_response'] = response.content[0].text
@@ -145,22 +145,23 @@ if 'current_ai_response' in st.session_state:
     st.success(f"**Jazz Support AI:** \n\n {st.session_state['current_ai_response']}")
     
     col1, col2 = st.columns(2)
+    
+    # Use variables to hold the state so the button doesn't lose them on click
+    current_res = st.session_state['current_ai_response']
+    current_issue = st.session_state.get('last_issue', "General Issue")
+
     with col1:
         if st.button("✅ This worked! Log success", key="log_btn"):
+            # 1. Run the function first
             try:
-                issue_to_log = st.session_state.get('last_issue', "Unknown Issue")
-                resolution_to_log = st.session_state.get('current_ai_response', "")
-                
-                log_to_google_sheets(software, machine, issue_to_log, resolution_to_log)
-                
-                st.toast("Successfully saved!")
+                log_to_google_sheets(software, machine, current_issue, current_res)
+                # 2. If successful, then clear and rerun
+                st.success("Data sent!") 
                 clear_and_reset()
                 st.rerun()
-                
             except Exception as e:
                 st.error(f"❌ LOGGING FAILED: {e}")
-                st.info("Check if your Google Sheet is set to 'Anyone with link can Edit'")
-                st.stop() # Stops the script here so the error remains visible
+                st.stop()
                 
     with col2:
         if st.button("🔄 Clear & Start Over", key="clear_btn"):
