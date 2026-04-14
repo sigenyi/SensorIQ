@@ -53,7 +53,7 @@ st.markdown(
     """
     <style>
     div[data-testid="stTextInput"] input {
-        background-color: #f3e5f5 !important; /* Very light purple */
+        background-color: #e7e5f5 !important; /* Very light purple */
         border: 2px solid #ce93d8 !important; /* Defined border */
         color: #4a148c !important; /* Deep purple text */
     }
