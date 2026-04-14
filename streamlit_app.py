@@ -47,6 +47,21 @@ except:
 
 # --- 4. UI CONFIGURATION ---
 st.set_page_config(page_title="Jazz Sensor Assistant", page_icon="🦷")
+
+# --- CUSTOM STYLING ---
+st.markdown(
+    """
+    <style>
+    div[data-testid="stTextInput"] input {
+        background-color: #f3e5f5 !important; /* Very light purple */
+        border: 2px solid #ce93d8 !important; /* Defined border */
+        color: #4a148c !important; /* Deep purple text */
+    }
+    </style>
+    """,
+    unsafe_allow_html=True
+)
+
 st.title("🦷 Jazz Sensor Image Quality Assistant")
 
 # --- 5. SIDEBAR: SETUP ---
