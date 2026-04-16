@@ -153,7 +153,7 @@ if st.button("Analyze Image Issue"):
             {"- APTERYX LIMITS: Adaptive Normalization (0-100%), Despeckle (3x3-15x15), Laplace (3x3-15x15, Level 0-100), Gamma (0-100)." if is_apteryx else ""}
 
             # 2. THE "CONTRAST" RULES (COLOR/STYLING)
-            - Steps 1 through 5 should be the numerical software changes.
+            - Use standard numbering (1, 2, 3) for all numerical software/filter adjustments.
             - **IMPORTANT**: Any steps regarding "Zooming out", "Handheld distance", "Exposure times", or "Physical Baselines" MUST be prefixed with the `>` character. 
             - Example: "> 6. Recommended Exposure: Anterior (0.08s) | Posterior (0.12s)."
 
