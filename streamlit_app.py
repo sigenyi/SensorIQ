@@ -104,7 +104,7 @@ st.divider()
 st.write("### 💬 Refine Image Quality")
 
 # Key='user_input' allows us to manipulate it later
-user_feedback = st.text_input("Describe the issue:", key="user_input")
+user_feedback = st.text_area(""How do you want to refine the image?", height=130, placeholder="e.g., The image is still too grainy in the posterior...")
 
 if st.button("Analyze Image Issue"):
     if user_feedback:
@@ -112,6 +112,10 @@ if st.button("Analyze Image Issue"):
             # Load text guides for AI context
             settings_guide = "knowledge/settings_guide.txt" # Define path
             quick_guide = "knowledge/quick_guide.txt"       # Define path
+
+            # Determine if the software belongs to the Apteryx family
+            apteryx_software = ["Dentiray", "Harmony", "Imaging XL", "Denticon XV Capture", "Denticon XV Web"]
+            is_apteryx = any(brand.lower() in software.lower() for brand in apteryx_software)
             
             prompt = f"""
             <task>
@@ -124,8 +128,22 @@ if st.button("Analyze Image Issue"):
             - Format ONLY as: **Issue**, followed by a numbered list of **Actions**.
             - NO intro, NO headers, NO "Root Cause", NO "Verification", NO titles.
             - NO conversational filler.
-            - List exact numerical changes based on: {settings_guide} and {quick_guide}.
             - Be extremely brief.
+
+            # 1. APTERYX SPECIFIC LOGIC
+            {"- APTERYX DEVICE DETECTED: Note that values are REVERSED (higher % = more data cut off)." if is_apteryx else ""}
+            {"- APTERYX LIMITS: Adaptive Normalization (0-100%), Despeckle (3x3-15x15), Laplace (3x3-15x15, Level 0-100), Gamma (0-100)." if is_apteryx else ""}
+
+            # 2. HISTOGRAM & EXPOSURE RULES
+            - IF Adaptive Normalization is adjusted: The AI must specify the level of peaks or dips to remove based on the recommended %. 
+             *Example: "Adjust Normalization to 2% and verify histogram peaks below 240 to confirm brightness reduction.."*
+            - ALWAYS provide recommended exposure times depending on the X-ray source.
+             *Example: "Recommended Exposure: Anterior (0.08s - 0.10s) | Posterior (0.12s - 0.15s)".
+
+            # 3. HANDHELD & PHYSICAL RULES
+            - IF Machine includes 'Handheld' or 'Gun': Mandatory Step: "Remind client to maintain the EXACT same distance from the X-ray handgun to the patient as used during this calibration."
+            - IF 'grainy' or 'pixelated': Add step to suggest zooming out to 1:1 or standing 3 feet back as the picture is magnified.
+            - FINAL STEP (Suggestion only): Suggest physical baseline (70kVp/7mA/0.10s) if refinement of image is complex.
             </constraints>
 
             <example_format>
@@ -133,6 +151,8 @@ if st.button("Analyze Image Issue"):
             1. Change Gamma from 0.65 to 0.90.
             2. Change Brightness from -0.05 to +0.10.
             3. Set S-Curve to 0.30.
+            4. Keep in mind the image is magnified. Zoom out to 1:1 size or stand 3 feet back to check diagnostic quality.
+            5. If issue persists, verify 70kVp/7mA/0.10s and cone-to-ring alignment.
             </example_format>
             """
             # ------------------------------------------
