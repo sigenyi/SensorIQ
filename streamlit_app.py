@@ -25,17 +25,16 @@ def log_to_google_sheets(software, machine, issue, settings):
         s = st.secrets["gcp_service_account"]
         
         # 3. Explicitly reconstruct the credentials object
-        # This bypasses some potential TOML parsing issues
         credentials_info = {
             "type": s["type"],
             "project_id": s["project_id"],
             "private_key_id": s["private_key_id"],
-            "private_key": s["private_key"],
+            "private_key": s["private_key"].replace("\\n", "\n"), # Fixes potential slash issues
             "client_email": s["client_email"],
             "client_id": s["client_id"],
-            "auth_uri": s["auth_uri"],
-            "token_uri": s["token_uri"],
-            "auth_provider_x509_cert_url": s["auth_provider_x509_cert_url"],
+            "auth_uri": "https://accounts.google.com/o/oauth2/auth",
+            "token_uri": "https://oauth2.google.com/token",
+            "auth_provider_x509_cert_url": "https://www.googleapis.com/oauth2/v1/certs",
             "client_x509_cert_url": s["client_x509_cert_url"]
         }
         
