@@ -2,7 +2,8 @@ import streamlit as st
 import pandas as pd
 import anthropic
 import os
-from streamlit_gsheets import GSheetsConnection
+import gspread
+from google.oauth2.service_account import Credentials
 from datetime import datetime
 
 # --- 1. SETUP CLAUDE ---
@@ -12,40 +13,41 @@ except:
     st.error("Missing CLAUDE_KEY in Streamlit Secrets!")
 
 # --- 2. DATA CONNECTIONS ---
-# Initialize connection with ttl=0 to disable caching (ensures live updates)
-conn = st.connection("gsheets", type=GSheetsConnection)
+import gspread
+from google.oauth2.service_account import Credentials
 
 def log_to_google_sheets(software, machine, issue, settings):
-    """Appends success data using the same schema as iq_settings.csv"""
-    new_entry = pd.DataFrame([{
-        "machine": machine,
-        "software": software,
-        "issue": issue,
-        "settings": settings,
-        "notes": f"Logged via Assistant: {datetime.now().strftime('%Y-%m-%d')}"
-    }])
-    
-    # 1. Read current data using the explicit URL from secrets
-    sheet_url = st.secrets["connections"]["gsheets"]["spreadsheet"]
-    existing_data = conn.read(spreadsheet=sheet_url)
-    
-    # 2. Append the new row
-    updated_df = pd.concat([existing_data, new_entry], ignore_index=True)
-    
-    # 3. Push back to Google Sheets
-    conn.update(spreadsheet=sheet_url, data=updated_df)
-    
-    # 4. Clear cache to ensure the next session sees the updated sheet
-    st.cache_data.clear()
+    """Appends success data using gspread for direct write access"""
+    try:
+        # 1. Setup credentials using the secrets we formatted earlier
+        scope = ["https://www.googleapis.com/auth/spreadsheets", "https://www.googleapis.com/auth/drive"]
+        creds = Credentials.from_service_account_info(
+            st.secrets["gcp_service_account"], 
+            scopes=scope
+        )
+        client = gspread.authorize(creds)
 
-def clear_and_reset():
-    """Clears AI response and input to start from zero."""
-    if 'current_ai_response' in st.session_state:
-        del st.session_state['current_ai_response']
-    if 'last_issue' in st.session_state:
-        del st.session_state['last_issue']
-    # 'user_input' is handled by the widget key
-    st.toast("System Reset - Parameters Cleared")
+        # 2. Open the sheet using the ID (found in your URL)
+        # Get the URL from your secrets or paste the ID string here directly
+        sheet_url = st.secrets["connections"]["gsheets"]["spreadsheet"]
+        sheet = client.open_by_url(sheet_url).sheet1
+
+        # 3. Prepare the row
+        new_row = [
+            machine,
+            software,
+            issue,
+            str(settings),
+            f"Logged via Assistant: {datetime.now().strftime('%Y-%m-%d')}"
+        ]
+
+        # 4. Append the row (No need to read existing data or concat!)
+        sheet.append_row(new_row)
+        return True
+
+    except Exception as e:
+        # This will give you the exact error if it fails
+        raise Exception(f"Logging Error: {e}")
 
 # --- 3. LOAD BASELINE DATA ---
 try:
