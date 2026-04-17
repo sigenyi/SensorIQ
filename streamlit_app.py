@@ -12,6 +12,7 @@ except Exception:
     st.stop()
 
 # --- 2. DATA CONNECTIONS & FUNCTIONS ---
+# Initialize connection
 conn = st.connection("gsheets", type=GSheetsConnection)
 
 def clear_and_reset():
@@ -20,16 +21,15 @@ def clear_and_reset():
         del st.session_state['current_ai_response']
     if 'last_issue' in st.session_state:
         del st.session_state['last_issue']
-    # Toast provides feedback before the rerun
     st.toast("System Reset - Parameters Cleared")
 
 def log_to_google_sheets(software, machine, issue, settings):
     """Appends success data using the validated GSheetsConnection"""
     try:
-        # Read existing data (warm up connection)
+        # 1. Warm up connection by reading
         existing_data = conn.read()
         
-        # Create the new row
+        # 2. Create the new row
         new_entry = pd.DataFrame([{
             "machine": machine,
             "software": software,
@@ -38,15 +38,13 @@ def log_to_google_sheets(software, machine, issue, settings):
             "timestamp": datetime.now().strftime("%Y-%m-%d %H:%M:%S")
         }])
         
-        # Merge and Update
+        # 3. Merge and Update
         updated_df = pd.concat([existing_data, new_entry], ignore_index=True)
         conn.update(data=updated_df)
         
-        st.cache_data.clear() 
+        st.cache_data.clear()
         return True
-        
     except Exception as e:
-        # This will catch the NameResolutionError if the DNS is still down
         st.error(f"LOGGING ERROR: {e}")
         return False
 
