@@ -76,7 +76,7 @@ software_options = sorted([
     "iDental", "Clio", "DTX Studio", "SOTA", "EzDent-i", "Open Dental", "Tab32", "SOPRO", 
     "Mipacs", "Denticon XV Capture", "Denticon XV Web", "CliniView", "Dentiray Capture", 
     "Imaging XL", "Prof. Suni", "Xray Vision", "SIGMA", "PatientGallery", "Xelis Dental", 
-    "Overjet", "Aeka", "CLASSIC", "Archy", "Other"
+    "Overjet", "Aeka", "CLASSIC", "Archy", "OTHER", "Harmony"
 ])
 software = st.sidebar.selectbox("Imaging Software", software_options)
 
@@ -124,17 +124,19 @@ if st.button("Analyze Image Issue"):
             - **IMPORTANT**: Any steps regarding "Zooming out", "Handheld distance", "Exposure times", or "Physical Baselines" MUST be prefixed with the `>` character. 
 
             # 3. HISTOGRAM & EXPOSURE RULES
-            - IF Adaptive Normalization is adjusted: The AI must specify the level of removal based on the recommended 1–50% extreme‑removal value.
+            - IF Adaptive Normalization is adjusted: The AI must specify the level of removal based on the recommended 1–50% removal value of peaks or dips.
+             *Example (Peaks): "Adjust Adaptive Normalization to remove the highest 2% of histogram peaks to confirm brightness reduction.."*
+             *Example (Dips): "Adjust Adaptive Normalization to remove the lowest 3% of histogram dips and verify shadow noise reduction.."*
             - ALWAYS provide recommended exposure times depending on the X-ray source.
 
             # 4. HANDHELD & PHYSICAL RULES
-            - IF Machine includes 'Handheld': Mandatory Step: "Remind client to maintain the EXACT same distance from the X-ray handgun."
-            - IF 'grainy' or 'pixelated': Suggest zooming out to 1:1 or standing 3 feet back.
+            - IF Machine includes 'Handheld': Mandatory Step: "Remind client to maintain the EXACT same distance from the X-ray handgun to the patient as used during this calibration."
+            - IF 'grainy' or 'pixelated': Suggest zooming out to 1:1 or standing 3 feet back as the picture is magnified.
             - FINAL STEP: Suggest physical baseline (70kVp/7mA/0.10s) if refinement is complex.
 
             # 5. DATA EXTRACTION (FOR THE SPREADSHEET ONLY)
             At the very bottom of your response, provide two hidden tags:
-            LOG_ISSUE: [Standardized category: dark xray, bright xray, grainy xray, low contrast, distorted, or pixelated]
+            LOG_ISSUE: [Standardized category: dark xray, bright xray, grainy xray, low contrast, distorted, underexposed, overexposed, foggy, static, blury, fuzzy, light, ghosting, or pixelated]
             LOG_SETTINGS: [Formatted exactly like this example: "Feature: Enabled (Param: Value, Param: Value), Feature: Enabled (Param: Value)"]
             </constraints>
             """
