@@ -80,7 +80,11 @@ software_options = sorted([
 ])
 software = st.sidebar.selectbox("Imaging Software", software_options)
 
-st.sidebar.link_button("🚀 Submit Feedback", "YOUR_NOTION_URL_HERE")
+# This adds spacing to push the button down (optional but looks cleaner)
+st.sidebar.markdown("---") 
+
+# THE FEEDBACK BUTTON
+st.sidebar.link_button("🚀 Problems, Feedback & Suggestions", "YOUR_NOTION_PAGE_URL_HERE", use_container_width=True)
 
 # --- 6. BASELINE DISPLAY ---
 match = df_baseline[(df_baseline['software'] == software) & 
@@ -96,7 +100,7 @@ else:
 st.divider()
 
 # --- 7. TROUBLESHOOTING ---
-st.write("### 💬 Refine Image Quality")
+st.write("### Refine Image Quality")
 user_feedback = st.text_area("How do you want to refine the image?", height=130, placeholder="e.g., The image is still too grainy...")
 
 if st.button("Analyze Image Issue"):
