@@ -141,8 +141,8 @@ if st.button("Analyze Image Issue"):
 
             try:
                 response = client.messages.create(
-                    model="claude-3-5-sonnet-20240620",
-                    max_tokens=600,
+                    model="claude-haiku-4-5-20251001",
+                    max_tokens=500, # Tightened limit to save tokens
                     messages=[{"role": "user", "content": prompt}]
                 )
                 full_text = response.content[0].text
