@@ -6,23 +6,30 @@ from streamlit_gsheets import GSheetsConnection
 
 # --- 1. SETUP CLAUDE ---
 try:
-    # This pulls from the stand-alone CLAUDE_KEY in secrets
     client = anthropic.Anthropic(api_key=st.secrets["CLAUDE_KEY"])
 except Exception:
     st.error("Missing CLAUDE_KEY in Streamlit Secrets!")
-    st.stop() # Stop the app if Claude isn't ready
+    st.stop()
 
-# --- 2. DATA CONNECTIONS ---
-# This pulls from the [connections.gsheets] block in secrets
+# --- 2. DATA CONNECTIONS & FUNCTIONS ---
 conn = st.connection("gsheets", type=GSheetsConnection)
+
+def clear_and_reset():
+    """Clears AI response and input to start from zero."""
+    if 'current_ai_response' in st.session_state:
+        del st.session_state['current_ai_response']
+    if 'last_issue' in st.session_state:
+        del st.session_state['last_issue']
+    # Toast provides feedback before the rerun
+    st.toast("System Reset - Parameters Cleared")
 
 def log_to_google_sheets(software, machine, issue, settings):
     """Appends success data using the validated GSheetsConnection"""
     try:
-        # 2. Read existing data (this ensures we have the column headers)
+        # Read existing data (warm up connection)
         existing_data = conn.read()
         
-        # 3. Create the new row as a DataFrame
+        # Create the new row
         new_entry = pd.DataFrame([{
             "machine": machine,
             "software": software,
@@ -31,19 +38,18 @@ def log_to_google_sheets(software, machine, issue, settings):
             "timestamp": datetime.now().strftime("%Y-%m-%d %H:%M:%S")
         }])
         
-        # 4. Merge and Update
+        # Merge and Update
         updated_df = pd.concat([existing_data, new_entry], ignore_index=True)
         conn.update(data=updated_df)
         
-        # 5. Clear cache so the next person gets fresh data
-        st.cache_data.clear()
+        st.cache_data.clear() 
         return True
         
     except Exception as e:
-        # This will tell us if it's still a DNS issue or a permission issue
+        # This will catch the NameResolutionError if the DNS is still down
         st.error(f"LOGGING ERROR: {e}")
         return False
-        
+
 # --- 3. LOAD BASELINE DATA ---
 try:
     df_baseline = pd.read_csv("iq_settings.csv")
