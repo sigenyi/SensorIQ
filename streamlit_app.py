@@ -87,21 +87,57 @@ st.sidebar.markdown("---")
 st.sidebar.link_button("🚀 Submit Feedback", "https://www.notion.so/jazzsupport/345f0a2e8ff5807d8f24d9a86bf4e742?v=345f0a2e8ff58080ae22000c286546a3&source=copy_link", use_container_width=True)
 
 # --- 6. BASELINE DISPLAY ---
+st.divider()
+
+# Match software and machine
 match = df_baseline[(df_baseline['software'] == software) & 
                     ((df_baseline['machine'] == machine) | (df_baseline['machine'] == "Unknown"))]
 
 if not match.empty:
     current_settings = match.iloc[0]['settings']
-    st.info(f"**Current Baseline:** {current_settings}")
+    # ATTENTION GRABBER: Recommended Baseline
+    st.markdown(f"""
+        <div style="background-color: #d4edda; padding: 15px; border-radius: 10px; border-left: 5px solid #28a745;">
+            <h3 style="color: #155724; margin: 0;">📍 STEP 1: Apply Recommended Baseline</h3>
+            <p style="color: #155724; font-size: 1.1em; margin-top: 10px;">
+                <b>Try these settings first:</b><br>{current_settings}
+            </p>
+            <p style="color: #155724; font-size: 0.9em;">
+                <i>If the image still isn't perfect, move to Step 2 below to refine it.</i>
+            </p>
+        </div>
+    """, unsafe_allow_html=True)
 else:
     current_settings = "Standard defaults."
-    st.warning("No specific baseline found. Using generic defaults.")
+    # ATTENTION GRABBER: No Baseline
+    st.markdown("""
+        <div style="background-color: #fff3cd; padding: 15px; border-radius: 10px; border-left: 5px solid #ffc107;">
+            <h3 style="color: #856404; margin: 0;">⚠️ No Baseline Found</h3>
+            <p style="color: #856404; font-size: 1.1em; margin-top: 10px;">
+                We don't have a saved baseline for this setup yet.
+            </p>
+            <p style="color: #856404; font-size: 1.1em; font-weight: bold;">
+                👉 START HERE: Use the 'Refine Image' box below to describe the current image, and AI will help you build the first baseline.
+            </p>
+        </div>
+    """, unsafe_allow_html=True)
 
-st.divider()
+st.write("") # Spacer
 
 # --- 7. TROUBLESHOOTING ---
-st.write("### Refine Image Quality")
-user_feedback = st.text_area("How do you want to refine the image?", height=130, placeholder="e.g., The image is still too grainy...")
+st.markdown("---") # Visual break from Step 1
+st.markdown("### 🛠️ STEP 2: Refine Image Quality")
+
+# Use a subtle info box for instructions so they don't get lost in the scroll
+st.info("💡 **Instructions:** If the baseline settings above aren't perfect, describe the visual issue below. Claude will provide specific adjustment steps.")
+
+# The actual input area
+user_feedback = st.text_area(
+    label="Describe the image issue:", 
+    height=150, 
+    placeholder="e.g., 'The posterior images are too dark' or 'The anterior is grainy'...",
+    help="Be as specific as possible (e.g., mention specific tooth areas or software filters)."
+)
 
 if st.button("Analyze Image Issue"):
     if user_feedback:
