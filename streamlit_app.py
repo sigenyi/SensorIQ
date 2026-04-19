@@ -98,12 +98,12 @@ if not match.empty:
     # ATTENTION GRABBER: Recommended Baseline
     st.markdown(f"""
         <div style="background-color: #d4edda; padding: 15px; border-radius: 10px; border-left: 5px solid #28a745;">
-            <h3 style="color: #155724; margin: 0;">📍 STEP 1: Apply Recommended Baseline</h3>
+            <h3 style="color: #155724; margin: 0;">🩻 Apply Recommended Baseline</h3>
             <p style="color: #155724; font-size: 1.1em; margin-top: 10px;">
                 <b>Try these settings first:</b><br>{current_settings}
             </p>
             <p style="color: #155724; font-size: 0.9em;">
-                <i>If the image still isn't perfect, move to Step 2 below to refine it.</i>
+                <i>If the image still isn't good, You can refine the Xray below.</i>
             </p>
         </div>
     """, unsafe_allow_html=True)
@@ -117,7 +117,7 @@ else:
                 We don't have a saved baseline for this setup yet.
             </p>
             <p style="color: #856404; font-size: 1.1em; font-weight: bold;">
-                👉 START HERE: Use the 'Refine Image' box below to describe the current image, and AI will help you build the first baseline.
+                Use the 'Refine Image' box below to describe the current Xray, and Jazz AI will help you build the first baseline.
             </p>
         </div>
     """, unsafe_allow_html=True)
@@ -126,10 +126,10 @@ st.write("") # Spacer
 
 # --- 7. TROUBLESHOOTING ---
 st.markdown("---") # Visual break from Step 1
-st.markdown("### 🛠️ STEP 2: Refine Image Quality")
+st.markdown("### Refine Image Quality")
 
 # Use a subtle info box for instructions so they don't get lost in the scroll
-st.info("💡 **Instructions:** If the baseline settings above aren't perfect, describe the visual issue below. Claude will provide specific adjustment steps.")
+st.info("💡 **Instructions:** If the baseline settings above aren't perfect, with the help of the Hygienist or Doctor describe the visual issue below. Jazz AI will provide specific adjustment steps.")
 
 # The actual input area
 user_feedback = st.text_area(
