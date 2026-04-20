@@ -68,9 +68,12 @@ st.title("🦷 Jazz AI Image Quality Assistant")
 
 # --- 5. SIDEBAR: SETUP ---
 st.sidebar.header("Initial Setup")
-machine = st.sidebar.selectbox("X-ray Source", ["Wall-mounted", "Hand-held"])
 
-software_options = sorted([
+# Machine selection with a blank starting point
+machine_options = ["Select...", "Wall-mounted", "Hand-held"]
+machine = st.sidebar.selectbox("X-ray Source", machine_options, index=0)
+
+software_options = ["Select..."] + sorted([
     "CDR DICOM", "Carestream", "Dentrix Ascend", "DEXIS", "Eaglesoft", "Sidexis", "Vixwin", 
     "XDR", "Edge Cloud", "Curve Hero", "Planmeca Romexis", "Oryx", "Tigerview", "Tracker", 
     "iDental", "Clio", "DTX Studio", "SOTA", "EzDent-i", "Open Dental", "Tab32", "SOPRO", 
@@ -78,7 +81,7 @@ software_options = sorted([
     "Imaging XL", "Prof. Suni", "Xray Vision", "SIGMA", "PatientGallery", "Xelis Dental", 
     "Overjet", "Aeka", "CLASSIC", "Archy", "OTHER", "Harmony"
 ])
-software = st.sidebar.selectbox("Imaging Software", software_options)
+software = st.sidebar.selectbox("Imaging Software", software_options, index=0)
 
 # This adds spacing to push the button down (optional but looks cleaner)
 st.sidebar.markdown("---") 
@@ -86,58 +89,73 @@ st.sidebar.markdown("---")
 # THE FEEDBACK BUTTON
 st.sidebar.link_button("🚀 Submit Feedback", "https://www.notion.so/jazzsupport/345f0a2e8ff5807d8f24d9a86bf4e742?v=345f0a2e8ff58080ae22000c286546a3&source=copy_link", use_container_width=True)
 
-# --- 6. BASELINE DISPLAY ---
-st.divider()
+# --- 6. MAIN SCREEN LOGIC ---
 
-# Match software and machine
-match = df_baseline[(df_baseline['software'] == software) & 
-                    ((df_baseline['machine'] == machine) | (df_baseline['machine'] == "Unknown"))]
-
-if not match.empty:
-    current_settings = match.iloc[0]['settings']
-    # ATTENTION GRABBER: Recommended Baseline
-    st.markdown(f"""
-        <div style="background-color: #d4edda; padding: 15px; border-radius: 10px; border-left: 5px solid #28a745;">
-            <h3 style="color: #155724; margin: 0;">🩻 Apply Recommended Baseline</h3>
-            <p style="color: #155724; font-size: 1.1em; margin-top: 10px;">
-                <b>Try these settings first:</b><br>{current_settings}
-            </p>
-            <p style="color: #155724; font-size: 0.9em;">
-                <i>If the image still isn't good, You can refine the Image below.</i>
-            </p>
-        </div>
-    """, unsafe_allow_html=True)
-else:
-    current_settings = "Standard defaults."
-    # ATTENTION GRABBER: No Baseline
+# Check if the user has made a selection yet
+if software == "Select..." or machine == "Select...":
+    # What they see when the app FIRST loads
     st.markdown("""
-        <div style="background-color: #fff3cd; padding: 15px; border-radius: 10px; border-left: 5px solid #ffc107;">
-            <h3 style="color: #856404; margin: 0;">⚠️ No Baseline Found</h3>
-            <p style="color: #856404; font-size: 1.1em; margin-top: 10px;">
-                We don't have a saved baseline for this setup yet.
-            </p>
-            <p style="color: #856404; font-size: 1.1em; font-weight: bold;">
-                🔻 Use the 'Refine Image' box below to describe the current Xray Image, and Jazz AI will help you build the first baseline.
+        <div style="text-align: center; margin-top: 100px;">
+            <h1 style="font-size: 3.5em; margin-bottom: 0;">👈 Start Here</h1>
+            <p style="font-size: 1.5em; color: #666;">
+                Please select the <b>X-ray Source</b> and <b>Imaging Software</b> <br>on the left sidebar to begin.
             </p>
         </div>
     """, unsafe_allow_html=True)
 
-st.write("") # Spacer
+else:
+    # --- BASELINE DISPLAY (Only shows after selection) ---
+    st.divider()
 
-# --- 7. TROUBLESHOOTING ---
-st.markdown("---") # Visual break from Step 1
-st.markdown("### Refine Image Quality")
+    # Match software and machine
+    match = df_baseline[(df_baseline['software'] == software) & 
+                        ((df_baseline['machine'] == machine) | (df_baseline['machine'] == "Unknown"))]
 
-# Use a subtle info box for instructions so they don't get lost in the scroll
-st.info("**Instructions:** If the baseline settings above aren't perfect, with the help of the Hygienist or Doctor, describe the visual issue below. Jazz AI will provide specific adjustment steps.")
+    if not match.empty:
+        current_settings = match.iloc[0]['settings']
+        # ATTENTION GRABBER: Recommended Baseline
+        st.markdown(f"""
+            <div style="background-color: #d4edda; padding: 15px; border-radius: 10px; border-left: 5px solid #28a745;">
+                <h3 style="color: #155724; margin: 0;">🩻 Apply Recommended Baseline</h3>
+                <p style="color: #155724; font-size: 1.1em; margin-top: 10px;">
+                    <b>Try these settings first:</b><br>{current_settings}
+                </p>
+                <p style="color: #155724; font-size: 0.9em;">
+                    <i>If the image still isn't good, you can refine the image below.</i>
+                </p>
+            </div>
+        """, unsafe_allow_html=True)
+    else:
+        current_settings = "Standard defaults."
+        # ATTENTION GRABBER: No Baseline
+        st.markdown("""
+            <div style="background-color: #fff3cd; padding: 15px; border-radius: 10px; border-left: 5px solid #ffc107;">
+                <h3 style="color: #856404; margin: 0;">⚠️ No Baseline Found</h3>
+                <p style="color: #856404; font-size: 1.1em; margin-top: 10px;">
+                    We don't have a saved baseline for this setup yet.
+                </p>
+                <p style="color: #856404; font-size: 1.1em; font-weight: bold;">
+                    ⛔️ Use the 'Refine Image' box below to describe the current Xray Image, and Jazz AI will help you build the first baseline.
+                </p>
+            </div>
+        """, unsafe_allow_html=True)
 
-# The actual input area
-user_feedback = st.text_area(
-    label="Describe the image issue:", 
-    height=150, 
-    placeholder="e.g., 'The posterior images are too dark' or 'The anterior is grainy'...",
-    help="Be as specific as possible (e.g., mention specific tooth areas or software filters)."
-)
+    st.write("") # Spacer
+
+    # --- 7. TROUBLESHOOTING ---
+    st.markdown("---") # Visual break from Step 1
+    st.markdown("### Refine Image Quality")
+
+    # Use a subtle info box for instructions
+    st.info("**Instructions:** If the baseline settings above aren't perfect, with the help of the Hygienist or Doctor, describe the visual issue below. Jazz AI will provide specific adjustment steps.")
+
+    # The actual input area
+    user_feedback = st.text_area(
+        label="Describe the image issue:", 
+        height=150, 
+        placeholder="e.g., 'The posterior images are too dark' or 'The anterior is grainy'...",
+        help="Be as specific as possible (e.g., mention specific tooth areas or software filters)."
+    )
 
 if st.button("Analyze Image Issue"):
     if user_feedback:
