@@ -44,11 +44,55 @@ def log_to_google_sheets(software, machine, issue, settings, notes):
         st.error(f"DATABASE ERROR: {e}")
         return False
 
-# --- 3. LOAD BASELINE DATA ---
+# --- 3. LOAD KNOWLEDGE & BASELINE DATA ---
+def load_knowledge():
+    """Reads the external technical manuals"""
+    try:
+        with open("knowledge/quick_guide.txt", "r") as f:
+            quick = f.read()
+        with open("knowledge/settings_guide.txt", "r") as f:
+            settings = f.read()
+        return f"QUICK GUIDE:\n{quick}\n\nSETTINGS GUIDE:\n{settings}"
+    except Exception as e:
+        return "Technical manuals not found. Use general best practices."
+
+knowledge_context = load_knowledge()
+
 try:
     df_baseline = pd.read_csv("iq_settings.csv")
 except:
     df_baseline = pd.DataFrame(columns=['machine', 'software', 'issue', 'settings', 'notes'])
+
+# --- SMART BASELINE GENERATOR ---
+def get_ai_baseline(software, machine, df):
+    """Gathers all history for a setup and asks AI to create a smart recommendation"""
+    history = df[(df['software'] == software) & (df['machine'] == machine)]
+    
+    if history.empty:
+        return None
+
+    # Limit history to the last 10 successful entries to keep prompt clean
+    past_logs = history.tail(10)[['issue', 'settings', 'notes']].to_string(index=False)
+    
+    baseline_prompt = f"""
+    Based on the following successful calibration history for {software} on a {machine} unit:
+    {past_logs}
+    
+    Technical Rules:
+    {knowledge_context}
+    
+    Task: Combine these successful settings into one "Gold Standard" baseline. 
+    Format: Only return the settings list. Be concise.
+    """
+    try:
+        response = client.messages.create(
+            model="claude-3-5-sonnet-20240620",
+            max_tokens=300,
+            messages=[{"role": "user", "content": baseline_prompt}]
+        )
+        return response.content[0].text
+    except:
+        return history.iloc[-1]['settings'] # Fallback to last successful row
 
 # --- 4. UI CONFIGURATION ---
 st.set_page_config(page_title="Jazz AI Image quality", page_icon="🦷")
@@ -93,16 +137,23 @@ st.sidebar.link_button("🚀 Submit Feedback", "https://www.notion.so/jazzsuppor
 
 # Check if the user has made a selection yet
 if software == "Select..." or machine == "Select...":
-    # What they see when the app FIRST loads
-    st.markdown("""
-        <div style="text-align: center; margin-top: 100px;">
-            <h1 style="font-size: 3.5em; margin-bottom: 0;">👈 Start Here</h1>
-            <p style="font-size: 1.5em; color: #666;">
-                Please select the <b>X-ray Source</b> and <b>Imaging Software</b> <br>on the left sidebar to begin.
-            </p>
-        </div>
-    """, unsafe_allow_html=True)
+    # (Keep your "Start Here" markdown)
+else:
+    st.divider()
+    
+    # We now call the AI to synthesize a baseline instead of a simple filter
+    with st.spinner("Synthesizing Smart Baseline..."):
+        current_baseline = get_ai_baseline(software, machine, df_baseline)
 
+    if current_baseline:
+        st.markdown(f"""
+            <div style="background-color: #d4edda; padding: 15px; border-radius: 10px; border-left: 5px solid #28a745;">
+                <h3 style="color: #155724; margin: 0;">🩻 Smart Recommended Baseline</h3>
+                <p style="color: #155724; font-size: 1.1em; margin-top: 10px;">
+                    <b>AI Synthesis of successful past cases:</b><br>{current_baseline}
+                </p>
+            </div>
+        """, unsafe_allow_html=True)
 else:
     # --- BASELINE DISPLAY (Only shows after selection) ---
     st.divider()
@@ -164,13 +215,20 @@ if st.button("Analyze Image Issue"):
             is_apteryx = any(brand.lower() in software.lower() for brand in apteryx_software)
             
             prompt = f"""
+            <knowledge_base>
+            {knowledge_context}
+            </knowledge_base>
+
             <task>
             Provide technical sensor calibration steps for: {software} | {machine}.
-            Baseline: {current_settings}
+            Current Settings: {current_baseline if current_baseline else "Standard Defaults"}
             User Issue: {user_feedback}
             </task>
 
             <constraints>
+            - REFINEMENT RULE: Suggest adjustments in steady, gradual increments (e.g., 5-10% changes). 
+            - DO NOT suggest extreme black-to-white jumps unless the user specifically states the image is "completely unusable" or "unidentifiable" or "Undiagnosable".
+            - Refer to the <knowledge_base> for software-specific guidence and filter logic.
             - Format ONLY as: **Issue**, followed by a numbered list of **Actions**.
             - NO intro, NO conversational filler.
             - Be extremely brief.
