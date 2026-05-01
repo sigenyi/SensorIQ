@@ -1,14 +1,14 @@
 import streamlit as st
-import pandas as pd
+import pd
 import anthropic
 import os
 from datetime import datetime
 from streamlit_gsheets import GSheetsConnection
 
 # --- 1. SETUP MODELS & CLIENT ---
-# Updated to current active model versions (May 2026)
-SONNET_MODEL = "claude-sonnet-4-6"  # High-level synthesis for Baselines
-HAIKU_MODEL = "claude-haiku-4-5"    # Rapid response for Troubleshooting
+# Using the most stable model IDs to avoid 404 errors
+SONNET_MODEL = "claude-3-5-sonnet-20241022" 
+HAIKU_MODEL = "claude-3-haiku-20240307"    # Reverted to Haiku 3 for maximum stability
 
 try:
     client = anthropic.Anthropic(api_key=st.secrets["CLAUDE_KEY"])
@@ -21,18 +21,17 @@ conn = st.connection("gsheets", type=GSheetsConnection)
 
 def load_technical_manuals():
     """Reads external TXT files from the /knowledge directory"""
-    # Note: Ensure these files exist in a folder named 'knowledge'
     paths = ["knowledge/quick_guide.txt", "knowledge/settings_guide.txt"]
     combined_knowledge = ""
     for path in paths:
         if os.path.exists(path):
             with open(path, "r") as f:
                 combined_knowledge += f"\n--- {path.upper()} ---\n{f.read()}\n"
-    return combined_knowledge if combined_knowledge else "Technical manuals not found in /knowledge folder."
+    return combined_knowledge if combined_knowledge else "Technical manuals not found."
 
 def clear_and_reset():
     """Clears session data for a fresh analysis"""
-    keys_to_delete = ['current_ai_response', 'last_issue', 'standardized_issue', 'formatted_settings', 'current_baseline']
+    keys_to_delete = ['current_ai_response', 'standardized_issue', 'formatted_settings', 'current_baseline', 'last_setup']
     for key in keys_to_delete:
         if key in st.session_state:
             del st.session_state[key]
@@ -58,24 +57,23 @@ def log_to_google_sheets(software, machine, issue, settings, notes):
         return False
 
 def get_ai_baseline(software, machine, df, knowledge):
-    """Uses SONNET to analyze past successful logs and create a smart baseline"""
+    """Uses SONNET to synthesize a baseline from history and knowledge"""
     history = df[(df['software'] == software) & (df['machine'] == machine)]
-    past_data = history.tail(10).to_string(index=False) if not history.empty else "No previous successful logs found."
+    past_data = history.tail(10).to_string(index=False) if not history.empty else "No history found."
     
     baseline_prompt = f"""
     You are a Senior Dental Imaging Specialist. 
-    Task: Synthesize a "Gold Standard" baseline for: {software} | {machine}.
+    Synthesize a "Gold Standard" baseline for: {software} | {machine}.
     
-    KNOWLEDGE BASE RULES:
+    KNOWLEDGE BASE:
     {knowledge}
     
-    PAST SUCCESSFUL LOGS (Evidence):
+    PAST SUCCESSES:
     {past_data}
     
     Requirements:
-    1. If history exists, find the common successful settings.
-    2. If no history exists, use the Knowledge Base to define the best starting point.
-    3. Return ONLY the settings list. Be extremely concise.
+    1. Combine the most successful past settings with the technical rules.
+    2. Format: Return ONLY the settings list. Be extremely concise.
     """
     try:
         response = client.messages.create(
@@ -85,12 +83,12 @@ def get_ai_baseline(software, machine, df, knowledge):
         )
         return response.content[0].text.strip()
     except Exception as e:
-        # Debug helper: shows the actual error if the AI call fails
         return f"Synthesis Error: {str(e)}"
 
-# --- 3. LOAD DATA & ASSETS ---
+# --- 3. LOAD INITIAL DATA ---
 knowledge_context = load_technical_manuals()
 try:
+    # This is for the AI to "read" history from your last successful logs
     df_baseline = pd.read_csv("iq_settings.csv")
 except:
     df_baseline = pd.DataFrame(columns=['machine', 'software', 'issue', 'settings', 'notes'])
@@ -123,11 +121,19 @@ software_options = ["Select..."] + sorted([
     "Overjet", "Aeka", "CLASSIC", "Archy", "OTHER", "Harmony"
 ])
 software = st.sidebar.selectbox("Imaging Software", software_options, index=0)
+
+st.sidebar.markdown("---") 
+st.sidebar.link_button("🚀 Submit Feedback", "YOUR_NOTION_URL_HERE", use_container_width=True)
 st.sidebar.caption("v1.0.1 | Jazz AI Support")
 
 # --- 6. MAIN LOGIC FLOW ---
 if software == "Select..." or machine == "Select...":
-    st.info("👈 Please select the setup on the sidebar to begin.")
+    st.markdown("""
+        <div style="text-align: center; margin-top: 100px;">
+            <h1 style="font-size: 3.5em; margin-bottom: 0;">👈 Start Here</h1>
+            <p style="font-size: 1.5em; color: #666;">Select the setup on the left sidebar to begin.</p>
+        </div>
+    """, unsafe_allow_html=True)
 else:
     # --- STEP 1: SMART BASELINE ---
     if 'current_baseline' not in st.session_state or st.session_state.get('last_setup') != f"{software}-{machine}":
@@ -137,28 +143,30 @@ else:
 
     st.markdown(f"""
         <div style="background-color: #d4edda; padding: 15px; border-radius: 10px; border-left: 5px solid #28a745;">
-            <h3 style="color: #155724; margin: 0;">📍 Recommended Baseline</h3>
-            <p style="color: #155724; font-size: 1.1em; margin-top: 10px;">{st.session_state['current_baseline']}</p>
+            <h3 style="color: #155724; margin: 0;">📍 STEP 1: Apply Recommended Baseline</h3>
+            <p style="color: #155724; font-size: 1.1em; margin-top: 10px;">
+                <b>AI Synthesis:</b><br>{st.session_state['current_baseline']}
+            </p>
         </div>
     """, unsafe_allow_html=True)
 
     # --- STEP 2: REFINEMENT ---
     st.markdown("---")
-    st.markdown("### 🛠️ Refine Image Quality")
-    user_feedback = st.text_area("Describe the issue:", placeholder="e.g., 'Image is too dark'...")
+    st.markdown("### 🛠️ STEP 2: Refine Image Quality")
+    user_feedback = st.text_area("Describe the issue:", height=150, placeholder="e.g., 'Image is too dark'...")
 
     if st.button("Analyze Image Issue"):
         if user_feedback:
-            with st.spinner("Analyzing with Haiku..."):
+            with st.spinner("Analyzing..."):
                 prompt = f"""
                 <knowledge_base>{knowledge_context}</knowledge_base>
                 Task: Troubleshoot {software} | {machine}.
-                Current Baseline: {st.session_state['current_baseline']}
-                User Feedback: {user_feedback}
+                Baseline: {st.session_state['current_baseline']}
+                User Issue: {user_feedback}
                 
                 Constraints:
                 1. STEADY STATE: Suggest 5-10% increments only.
-                2. ADAPTIVE NORMALIZATION: Value N = N% of data levels removed.
+                2. ADAPTIVE NORMALIZATION: N = N% of data levels removed.
                 3. FORMAT: **Issue**, then numbered **Actions**.
                 
                 LOG_ISSUE: [Tag]
@@ -167,13 +175,50 @@ else:
                 try:
                     response = client.messages.create(
                         model=HAIKU_MODEL,
-                        max_tokens=500,
+                        max_tokens=600,
                         messages=[{"role": "user", "content": prompt}]
                     )
-                    st.session_state['current_ai_response'] = response.content[0].text
+                    full_text = response.content[0].text
+                    
+                    # Parse tags for logging
+                    main_advice = []
+                    log_issue = "general"
+                    log_settings = "none"
+                    for line in full_text.split('\n'):
+                        if "LOG_ISSUE:" in line: log_issue = line.split("LOG_ISSUE:")[1].strip()
+                        elif "LOG_SETTINGS:" in line: log_settings = line.split("LOG_SETTINGS:")[1].strip()
+                        else: main_advice.append(line)
+                    
+                    st.session_state['current_ai_response'] = "\n".join(main_advice).strip()
+                    st.session_state['standardized_issue'] = log_issue
+                    st.session_state['formatted_settings'] = log_settings
                 except Exception as e:
                     st.error(f"Analysis Error: {str(e)}")
 
+    # --- 7. RESULTS & LOGGING ---
     if 'current_ai_response' in st.session_state:
-        st.success(st.session_state['current_ai_response'])
+        st.success(f"**Jazz Support AI Advice:** \n\n {st.session_state['current_ai_response']}")
         
+        st.divider()
+        st.write("### 📝 Finalize Log Entry")
+        tech_notes = st.text_input("Add tech notes (optional):", placeholder="Client is happy...")
+
+        col1, col2 = st.columns(2)
+        with col1:
+            if st.button("✅ Log Success", key="log_btn"):
+                with st.spinner("Logging..."):
+                    success = log_to_google_sheets(
+                        software, 
+                        machine, 
+                        st.session_state['standardized_issue'], 
+                        st.session_state['formatted_settings'], 
+                        tech_notes
+                    )
+                    if success:
+                        st.toast("✅ Logged Successfully!")
+                        clear_and_reset()
+                        st.rerun()
+        with col2:
+            if st.button("🔄 Clear & Start Over", key="clear_btn"):
+                clear_and_reset()
+                st.rerun()
