@@ -21,7 +21,11 @@ conn = st.connection("gsheets", type=GSheetsConnection)
 
 def load_technical_manuals():
     """Reads external TXT files from the /knowledge directory"""
-    paths = ["knowledge/quick_guide.txt", "knowledge/settings_guide.txt"]
+    paths = [
+        "knowledge/quick_guide.txt", 
+        "knowledge/settings_guide.txt",
+        "knowledge/radiography_guide.txt"  # ADDED THIS
+    ]
     combined_knowledge = ""
     for path in paths:
         if os.path.exists(path):
@@ -63,36 +67,33 @@ def log_to_google_sheets(software, machine, issue, settings, notes):
         st.error(f"DATABASE ERROR: {e}")
         return False
 
-def get_ai_baseline(software, machine, df, knowledge):
-    """Uses SONNET to synthesize a baseline from history and knowledge files"""
-    # Look for history of this specific setup
+def get_ai_baseline(software, machine, hardware_specs, df, knowledge):
+    """Uses SONNET to synthesize a baseline from history and knowledge"""
     history = df[(df['software'] == software) & (df['machine'] == machine)]
-    past_logs = history.tail(10).to_string(index=False) if not history.empty else "No history found for this setup."
+    past_logs = history.tail(10).to_string(index=False) if not history.empty else "No history found."
     
     baseline_prompt = f"""
     You are a Senior Dental Imaging Specialist. 
-    Task: Create a "Gold Standard" baseline for: {software} | {machine}.
-    
-    TECHNICAL KNOWLEDGE:
-    {knowledge}
-    
-    HISTORICAL SUCCESSES:
-    {past_logs}
-    
-    Rules:
-    - If history exists, synthesize the common settings that led to success.
-    - If no history, use the Technical Knowledge to define the best start.
-    - Format: Return ONLY a concise list of settings. No conversational text.
+    Synthesize a "Gold Standard" baseline for: {software} | {machine}.
+
+    HARDWARE CONTEXT: {hardware_specs}
+    KNOWLEDGE BASE: {knowledge}
+
+    RADIOGRAPHY PHYSICS RULES:
+    1. X-rays are negatives. RADIOPAQUE (dense/enamel/metal) = Whites. RADIOLUCENT (air/decay/pulp) = Blacks.
+    2. CONTRAST/BRIGHTNESS RULE: Avoid adjusting Contrast or Brightness. Prioritize Gamma, CLAHE, and Adaptive Normalization. Only suggest Contrast/Brightness if standard tools cannot fix the exposure.
+
+    Format: Return ONLY the settings list. Be extremely concise.
     """
     try:
         response = client.messages.create(
             model=SONNET_MODEL,
-            max_tokens=300,
+            max_tokens=600,
             messages=[{"role": "user", "content": baseline_prompt}]
         )
         return response.content[0].text.strip()
     except Exception as e:
-        return f"Standard Defaults (AI Synthesis error: {str(e)})"
+        return f"Baseline Synthesis Unavailable (Error: {str(e)})"
 
 # --- 3. LOAD DATA ---
 knowledge_context = load_technical_manuals()
@@ -122,6 +123,7 @@ st.title("🦷 Jazz AI Image Quality Assistant")
 st.sidebar.header("Initial Setup")
 machine = st.sidebar.selectbox("X-ray Source", ["Select...", "Wall-mounted", "Hand-held"], index=0)
 
+# Define options BEFORE the selectbox
 software_options = ["Select..."] + sorted([
     "CDR DICOM", "Carestream", "Dentrix Ascend", "DEXIS", "Eaglesoft", "Sidexis", "Vixwin", 
     "XDR", "Edge Cloud", "Curve Hero", "Planmeca Romexis", "Oryx", "Tigerview", "Tracker", 
@@ -132,9 +134,17 @@ software_options = ["Select..."] + sorted([
 ])
 software = st.sidebar.selectbox("Imaging Software", software_options, index=0)
 
+st.sidebar.divider()
+st.sidebar.header("⚙️ Hardware Settings")
+kvp = st.sidebar.number_input("kVp (Contrast Power)", min_value=50, max_value=90, value=70)
+ma = st.sidebar.number_input("mA (Photon Quantity)", min_value=1.0, max_value=10.0, value=7.0, step=0.1)
+exposure = st.sidebar.number_input("Exposure (Seconds)", min_value=0.01, max_value=1.00, value=0.10, step=0.01)
+
+# This variable is passed to the AI models
+hardware_context = f"kVp: {kvp}, mA: {ma}, Exposure: {exposure}s"
+
 st.sidebar.markdown("---") 
-st.sidebar.link_button("🚀 Submit Feedback", "YOUR_NOTION_URL_HERE", use_container_width=True)
-st.sidebar.caption("v1.0.2 | Jazz AI Support")
+st.sidebar.caption("v1.0.3 | Jazz AI Support")
 
 # --- 6. MAIN LOGIC ---
 if software == "Select..." or machine == "Select...":
@@ -167,26 +177,28 @@ else:
     st.markdown("### 🛠️ STEP 2: Refine Image Quality")
     user_feedback = st.text_area("Describe the issue:", height=150, placeholder="e.g., 'Shadows are too muddy'...")
 
-    if st.button("Analyze Image Issue"):
+if st.button("Analyze Image Issue"):
         if user_feedback:
             with st.spinner("Analyzing..."):
                 prompt = f"""
                 <knowledge_base>{knowledge_context}</knowledge_base>
                 Task: Troubleshoot {software} | {machine}.
+                Hardware Specs: {hardware_context}
                 Current Baseline: {st.session_state['current_baseline']}
-                User Issue: {user_feedback}
-                
-                Constraints:
-                1. STEADY STATE RULE: Adjustments must be GRADUAL (5-10% changes). No extreme jumps.
-                2. ADAPTIVE NORMALIZATION LOGIC: 
-                   - Low/High Percentile N = N% of data levels removed from shadows/highlights.
-                   - Must state: "Set [Low/High] Percentile to [N] to remove [N]% of data levels."
-                3. FORMAT: **Issue**, then a numbered list of **Actions**. 
+                User Feedback: {user_feedback}
 
-                At the bottom include:
-                LOG_ISSUE: [Standardized Tag]
-                LOG_SETTINGS: [Formatted Settings String]
+                STRICT CONSTRAINTS:
+                1. PHYSICS: Whites are Radiopaque (dense bone). Blacks are Radiolucent (empty air).
+                2. SOFT CONSTRAINT: Only suggest changes to 'Contrast' or 'Brightness' as a LAST RESORT if Gamma, AN Percentiles, and CLAHE fail.
+                3. DIRECT MODE: No conversational filler. Provide a quick summary of the cause, then recommended changes.
+                4. FORMAT:
+                   - Summary: [1 sentence cause]
+                   - Actions: [Direct list: 'Parameter: Change from X to Y']
+                   
+                LOG_ISSUE: [Tag]
+                LOG_SETTINGS: [Settings string]
                 """
+                
                 try:
                     response = client.messages.create(
                         model=HAIKU_MODEL,
