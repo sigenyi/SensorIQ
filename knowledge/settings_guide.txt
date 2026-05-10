@@ -18,6 +18,11 @@ Extreme Changes: Do not suggest jumps larger than 20% unless the user describes 
     - Low Scale (0.10 - 0.30): "Hard Clip." Keeps data removed. Best for standard bone/caries checks.  
     - High Scale (0.70 - 0.90): "Soft Clip." Intentionally re-introduces the removed tails. Vital for seeing hairline fractures that are otherwise "clipped".
 
+## THE CLIPPING THRESHOLD (DATA LOSS LIMITS)
+- CRITICAL BOUNDARY: High Percentile values > 97% or Low Percentile values > 5%.
+- MECHANISM: Setting the High Percentile to 99 removes the top 1% of brightest pixels. If an image is already "bright," increasing this further will permanently "clip" (delete) enamel detail.
+- AI SAFETY RULE: If the user complains of "missing detail" or "blown out" areas, the AI MUST check if the High Percentile is too high. You cannot recover data that has been clipped before it reaches the Gamma stage.
+
 # 2. IMAGE ROTATION & INTEGRATION BEHAVIOR
 - BEHAVIOR RULE: 
     - TWAIN: Rotation/Flip settings in the Jazz tool WILL affect the final image.
