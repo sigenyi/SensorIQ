@@ -19,6 +19,11 @@ FORMAT: Hierarchical Knowledge Schema (HKS)
 - HIGH_KV EFFECT: Low contrast; image appears "Uniformly Gray."
 - OVER-PENETRATION: Excessively high kV passes straight through to detector, "washing out" all anatomical detail.
 
+# INVERSE_PROPORTIONALITY_LAWS:
+- RULE: Density is the product of Quality (kV) and Quantity (mAs).
+- MECHANICAL ADJUSTMENT: If a technician increases kV by 10 (increasing penetration), the AI must recommend a compensatory increase in Gamma (>1.0) or a decrease in mAs to prevent a "washed out" gray appearance.
+- FORMULA: Higher Energy (kV) = Lower Contrast. To restore visual "snap" after a kV increase, the software must tighten the S-Curve or increase the CLAHE Clip Limit.
+
 # GEOMETRIC_INTEGRITY: DISTANCE_FACTORS
 - FFD (Focal-Film Distance): Affects magnification and intensity. 
   - RULE: A 20cm increase in FFD requires doubling the mAs (Inverse Square Law approximation).
