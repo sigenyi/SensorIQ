@@ -1,0 +1,92 @@
+[SYSTEM_META_DATA]
+SOURCE: Integrated Radiography Guide + Exposure Physics Supplement
+PURPOSE: Training/Inference for Dental X-Ray Image Reformatting Models
+FORMAT: Hierarchical Knowledge Schema (HKS)
+
+--- SECTION 1: RADIOGRAPHIC EXPOSURE PHYSICS (THE ACQUISITION LAYER) ---
+
+# EXPOSURE_FACTOR_QUANTITY: mAs (Milliampere-seconds)
+- DEFINITION: Product of tube current (mA) and exposure time (s).
+- FUNCTION: Controls the total volume (quantity) of radiation.
+- UNDER-EXPOSURE (Too Low): Image is too light; high "Quantum Mottle" (graininess/noise).
+- OVER-EXPOSURE (Too High): Image is too dark (burnout).
+- AI_REFORMATTING_LOGIC: If mAs is low, AI must use aggressive Denoising but conservative CLAHE to avoid amplifying artifacts.
+
+# EXPOSURE_FACTOR_QUALITY: kV (Kilovoltage)
+- DEFINITION: Voltage across the tube; determines photon energy (penetration).
+- PENETRATION: Higher kV penetrates dense tissue better but reduces soft tissue contrast.
+- LOW_KV EFFECT: High contrast; distinct black/white levels.
+- HIGH_KV EFFECT: Low contrast; image appears "Uniformly Gray."
+- OVER-PENETRATION: Excessively high kV passes straight through to detector, "washing out" all anatomical detail.
+
+# GEOMETRIC_INTEGRITY: DISTANCE_FACTORS
+- FFD (Focal-Film Distance): Affects magnification and intensity. 
+  - RULE: A 20cm increase in FFD requires doubling the mAs (Inverse Square Law approximation).
+- OFD (Object-Film Distance): The gap between patient and sensor.
+  - RULE: Minimize OFD to prevent geometric unsharpness/blurring (The "Hand-Shadow" principle).
+  - AI_REFORMATTING_LOGIC: High OFD requires higher "Sigma" sharpening to compensate for penumbra.
+
+--- SECTION 2: ANATOMICAL LANDMARKS & DENSITY PROFILES ---
+
+# RADIOPACITY_LEVELS (Visual Logic)
+- RADIOPAQUE (White/Light): Dense structures (Cortical bone, Enamel, Septa, Metal).
+- RADIOLUCENT (Dark/Black): Less dense (Cancellous bone marrow, Pulp, PDL space, Sinuses, Caries).
+
+# MANDIBULAR_KEY_POINTS
+- Genial Tubercles: Ring-shaped radiopacity below incisor apices.
+- Lingual Foramen: Radiolucent dot inside the genial tubercle ring.
+- Mental Foramen: Ovoid radiolucency near premolar apices (Note: Do not confuse with pathology).
+- Mandibular Canal: Radiolucent band with thin radiopaque cortical walls.
+
+# MAXILLARY_KEY_POINTS
+- Incisive Foramen: Ovoid radiolucency between central incisors.
+- Maxillary Sinus: Large radiolucent area; floor appears as dense cortical bone.
+- Inverted Y: Intersection of nasal fossa and maxillary sinus (Critical landmark).
+- Zygomatic Process: U or J-shaped radiopacity superior to first molar.
+
+# TOOTH_SUPPORT_STRUCTURES
+- Lamina Dura: Dense radiopaque line of the tooth socket.
+- PDL Space: Thin radiolucent line between root and lamina dura (Diagnostic target for AI).
+- Alveolar Crest: Coronal bone (Healthy = 1.5–2.0mm below CEJ).
+
+--- SECTION 3: DIGITAL REFORMATTING ALGORITHMS & PIPELINE ---
+
+# REFORMATTING_ORDER_OF_OPERATIONS (Critical for AI)
+1. ADAPTIVE_NORMALIZATION: Establishes global structure (Non-linear).
+2. CLAHE: Enhances local detail/contrast (Non-linear, tile-based).
+3. GAMMA_CORRECTION: Controls mid-tone perception without clipping.
+4. SHARPENING: Edge emphasis (Unsharp masking).
+5. CONTRAST/BRIGHTNESS: Final linear tuning.
+
+# ALGORITHM_LOGIC_&_RISKS
+- Adaptive Normalization: 
+  - Strengths: Compensates for mAs/kV variations. 
+  - Risks: Can flatten images if dynamic range is low.
+- CLAHE (Local Detail): 
+  - Strengths: Acts as a "microscope" for trabecular bone.
+  - Risks: High "Clip Limit" amplifies noise (Quantum Mottle).
+- Sharpening (Unsharp Mask):
+  - Logic: High Weight = High Edge Emphasis.
+  - Risks: "Halo Artifacts" around metal or dense enamel; can create "False Fractures."
+- Gamma:
+  - Logic: < 1.0 (Brightens mid-tones); > 1.0 (Darkens mid-tones).
+  - Use: Corrects for over-penetration (High kV) or under-exposure (Low mAs).
+
+--- SECTION 4: AI DIAGNOSTIC DECISION MATRIX ---
+
+> IF Image_Grainy (Low mAs): 
+    - PRIORITY: Noise Reduction > Normalization. 
+    - AVOID: High Sharpening (amplifies noise).
+
+> IF Image_Uniform_Gray (High kV): 
+    - PRIORITY: Increase Contrast + Adjust Gamma (>1.0).
+    - AVOID: Over-Normalization (may wash out gray values further).
+
+> IF Image_Blurry (High OFD):
+    - PRIORITY: Edge-detection sharpening with low Sigma.
+    - GOAL: Compensate for geometric penumbra.
+
+> IF Bone_Pathology_Suspected:
+    - PRIORITY: CLAHE (High Clip Limit) to isolate trabecular spicules.
+
+[EOF: RADIOGRAPHY_GUIDE_FINAL]
