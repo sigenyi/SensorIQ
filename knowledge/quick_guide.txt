@@ -31,6 +31,13 @@ Issue: Rotation/Flip Not Saving:
 Issue: Normalization Ineffective: 
 - If the image looks "flat" despite high percentiles, the S-Curve scale is likely too high (e.g., 0.90), which is overriding the data removal.
 
+## SENSOR AGING & DEGRADATION MECHANISM
+THE "SILICON FATIGUE" RULE: Digital sensors lose sensitivity over 5-10 years.
+SYMPTOM: An old sensor will produce "Grainy" images even when using the "Recommended Exposure Times" listed above.
+SYSTEMIC FIX: If the hardware settings (kV/mAs) are correct according to the chart but the image is still noisy, the AI must diagnose "Sensor Fatigue" and recommend:
+A permanent 15-20% increase in exposure time (Hardware).
+Activating 2x2 Binning in the Jazz settings (Software) to consolidate the remaining sensitivity.
+
 # INTEGRATION TROUBLESHOOTING
 - Issue: Trouble with Image rotation/flip in the final result of the image.
 - Logic: 
