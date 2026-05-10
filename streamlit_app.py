@@ -18,18 +18,15 @@ except Exception:
 # --- 2. DATA CONNECTIONS & HELPER FUNCTIONS ---
 conn = st.connection("gsheets", type=GSheetsConnection)
 
-# GAP 1/2/3/5 FIX: Load ALL knowledge files including the three new ones
 def load_technical_manuals():
     """Reads ALL TXT files from the /knowledge directory."""
     paths = [
-        # Original files
         "knowledge/quick_guide.txt",
         "knowledge/settings_guide.txt",
         "knowledge/radiography_guide.txt",
-        # NEW: Gap-filling knowledge files
-        "knowledge/sensor_model.txt",           # Gap 1 & 2: sensor physics + param interactions
-        "knowledge/differential_diagnosis.txt", # Gap 3: inverse reasoning tree
-        "knowledge/success_criteria.txt",       # Gap 5: quantitative image quality standards
+        "knowledge/sensor_model.txt",           # sensor physics + param interactions
+        "knowledge/differential_diagnosis.txt", # inverse reasoning tree
+        "knowledge/success_criteria.txt",       # quantitative image quality standards
     ]
     combined_knowledge = ""
     for path in paths:
@@ -71,7 +68,7 @@ def log_to_google_sheets(software, machine, issue, settings, notes):
         return False
 
 
-# GAP 1 FIX: Saturation check — detect hardware-level problems before any AI work
+# Detection of hardware-level problems before any AI work
 def check_saturation_risk(kvp, ma, exposure, machine):
     """
     Detects conditions where sensor saturation is likely. 
@@ -97,9 +94,9 @@ def check_saturation_risk(kvp, ma, exposure, machine):
 def get_ai_baseline(software, machine, hardware_specs, df, knowledge):
     """
     Uses SONNET to synthesize a baseline. 
-    GAP 3 FIX: Prompt now instructs the model to use the differential diagnosis 
+    Prompt instructs the model to use the differential diagnosis 
     protocol and sensor model, not just past history and recipes.
-    GAP 5 FIX: Baseline now references diagnostic goal context.
+    Baseline now references diagnostic goal context.
     """
     history = df[(df['software'] == software) & (df['machine'] == machine)]
     past_logs = history.tail(10).to_string(index=False) if not history.empty else "No history found."
@@ -140,7 +137,7 @@ def get_ai_baseline(software, machine, hardware_specs, df, knowledge):
     try:
         response = client.messages.create(
             model=SONNET_MODEL,
-            max_tokens=700,
+            max_tokens=800,
             messages=[{"role": "user", "content": baseline_prompt}]
         )
         return response.content[0].text.strip()
@@ -196,7 +193,7 @@ exposure = st.sidebar.number_input("Exposure (Seconds)", min_value=0.01, max_val
 
 hardware_context = f"kVp: {kvp}, mA: {ma}, Exposure: {exposure}s, mAs: {round(ma * exposure, 3)}"
 
-# GAP 1 FIX: Show saturation warnings in the sidebar, before AI work begins
+# Show saturation warnings in the sidebar, before AI work begins
 saturation_warnings = check_saturation_risk(kvp, ma, exposure, machine if machine != "Select..." else "Wall-mounted")
 if saturation_warnings:
     st.sidebar.divider()
@@ -204,7 +201,7 @@ if saturation_warnings:
     for w in saturation_warnings:
         st.sidebar.markdown(f'<div class="saturation-box">{w}</div>', unsafe_allow_html=True)
 
-# GAP 5 FIX: Diagnostic goal selector — shapes the AI's success criteria reference
+# Diagnostic goal selector — shapes the AI's success criteria reference
 st.sidebar.divider()
 st.sidebar.header("🎯 Diagnostic Goal")
 diagnostic_goal = st.sidebar.selectbox(
