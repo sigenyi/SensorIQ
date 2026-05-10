@@ -181,7 +181,7 @@ software_options = ["Select..."] + sorted([
     "iDental", "Clio", "DTX Studio", "SOTA", "EzDent-i", "Open Dental", "Tab32", "SOPRO",
     "Mipacs", "Denticon XV Capture", "Denticon XV Web", "CliniView", "Dentiray Capture",
     "Imaging XL", "Prof. Suni", "Xray Vision", "SIGMA", "PatientGallery", "Xelis Dental",
-    "Overjet", "Aeka", "CLASSIC", "Archy", "OTHER", "Harmony"
+    "Overjet", "Aeka", "CLASSIC", "Archy", "Acteon", "Mogo", "VisionX", "Harmony", "OTHER"
 ])
 software = st.sidebar.selectbox("Imaging Software", software_options, index=0)
 
