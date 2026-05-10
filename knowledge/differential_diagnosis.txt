@@ -1,0 +1,179 @@
+# JAZZ AI DIFFERENTIAL DIAGNOSIS PROTOCOL
+# Purpose: Enable inverse reasoning — from a SYMPTOM, trace back to the ROOT CAUSE,
+# then recommend the most targeted fix. This is what makes the system valid beyond
+# its logged data. Always use this tree before suggesting any software parameter change.
+
+---
+
+## SECTION 1: HOW TO USE THIS PROTOCOL
+
+STEP 1 — Classify the symptom from user feedback.
+STEP 2 — Run the disambiguation questions (check hardware context vs software settings).
+STEP 3 — Identify the most probable root cause.
+STEP 4 — Apply the fix from the LOWEST RISK layer first (hardware check → AN → CLAHE → Gamma).
+STEP 5 — Only escalate to Contrast/Brightness if all other layers have failed.
+
+---
+
+## SECTION 2: SYMPTOM → DIFFERENTIAL DIAGNOSIS TREE
+
+### SYMPTOM A: Image is too bright / washed out / bone detail lost in white areas
+
+DIFFERENTIAL (ordered by likelihood):
+  A1. AN High Percentile set too LOW (most common software cause)
+      - Indicator: Settings show High Percentile < 97. Normalization is clipping too much.
+      - Fix: Increase High Percentile toward 99 in 2% increments.
+  A2. mAs overexposure (hardware)
+      - Indicator: Exposure time above recommended range for region. Large flat-white areas.
+      - Distinguishing test: Is there ANY visible internal detail in the white areas?
+        If NO → likely sensor saturation (hardware). Software cannot fix this.
+        If YES → software normalization issue (A1 above).
+      - Fix: Reduce exposure time per quick_guide.txt chart.
+  A3. kVp too high (hardware — over-penetration)
+      - Indicator: kVp above 80. Image is bright AND flat (low contrast).
+      - Key distinguishing feature: BOTH bright AND gray/flat simultaneously.
+      - Fix: Reduce kVp to 70 baseline, then adjust.
+  A4. Gamma too high (> 0.75)
+      - Indicator: Mid-tones are bright, highlights blown.
+      - Fix: Reduce Gamma toward 0.65 baseline.
+
+  CRITICAL RULE: If the white areas have ZERO internal detail (completely flat), this is
+  sensor saturation. DO NOT attempt software corrections. Inform tech the hardware exposure
+  must be reduced before any software work will be meaningful.
+
+---
+
+### SYMPTOM B: Image is too dark / bone structure not visible / everything black
+
+DIFFERENTIAL:
+  B1. AN Low Percentile set too HIGH
+      - Indicator: Low Percentile > 3. Too much shadow data being removed.
+      - Fix: Reduce Low Percentile toward 1 (default) in 1% increments.
+  B2. mAs underexposure (hardware)
+      - Indicator: Exposure time below recommended. Image also grainy (Quantum Mottle).
+      - Distinguishing test: Is the image ALSO grainy/noisy? If YES → underexposure.
+      - Fix: Increase exposure time per quick_guide.txt. Use Noise Filter before any other step.
+  B3. Gamma too low (< 0.45)
+      - Indicator: Mid-tones crushed dark. Extreme shadows throughout.
+      - Fix: Increase Gamma toward 0.65 baseline.
+  B4. 2x2 Binning OFF when it should be ON (weak X-ray source)
+      - Indicator: Hand-held unit. Image consistently dark across sessions.
+      - Fix: Enable 2x2 Binning to increase sensitivity.
+
+---
+
+### SYMPTOM C: Image is flat / gray / low contrast / "everything looks the same density"
+
+DIFFERENTIAL:
+  C1. kVp too high (most common hardware cause)
+      - Indicator: kVp at 75+. Histogram compressed to mid-gray.
+      - This is the HIGH kVp effect: photons penetrate everything → all gray.
+      - Fix: Reduce kVp to 65-70. Cannot be fully corrected in software.
+      - Partial software fix: Increase CLAHE Clip Limit to 2.25-2.50 to enhance local contrast.
+  C2. S-Curve Scale too high (overriding AN normalization)
+      - Indicator: S-Curve > 0.75 AND image looks flat despite correct AN percentiles.
+      - Mechanism: High S-Curve re-introduces the data that AN removed. The two cancel out.
+      - Fix: Reduce S-Curve to 0.30 (Hard Clip) to let AN normalization take effect.
+  C3. AN not enabled / Low and High Percentiles at defaults but not activated
+      - Fix: Ensure Adaptive Normalization is toggled ON.
+
+---
+
+### SYMPTOM D: Image is grainy / pixelated / noisy / "salt and pepper"
+
+DIFFERENTIAL:
+  D1. mAs underexposure / Quantum Mottle (primary cause)
+      - Indicator: Low mAs or short exposure time. Noise is random and uniform.
+      - Physics: Low photon count → high relative statistical noise at sensor.
+      - Fix ORDER: (1) Increase exposure time first. (2) Apply Noise Filter.
+        AVOID: High CLAHE or High Sharpening — both amplify existing noise.
+  D2. Image over-magnified in viewer (not a real image problem)
+      - Indicator: Image looks fine at 1:1 zoom but grainy when zoomed in.
+      - Fix: View at 1:1 zoom or stand 3 feet back. Recommend tech to zoom out.
+  D3. 2x2 Binning ACTIVE when resolution is needed
+      - Indicator: Binning is ON but high-detail work (endo, fracture) is needed.
+      - Binning trades resolution for sensitivity. If enough X-ray is available, turn OFF.
+
+---
+
+### SYMPTOM E: Image is blurry / soft edges / structures not sharp
+
+DIFFERENTIAL:
+  E1. OFD (Object-Film Distance) too high — geometric penumbra
+      - Indicator: Sensor not fully seated against teeth. Especially common in posterior regions.
+      - This is a physical blur at the CsI scintillator level.
+      - Fix: Improve sensor placement. Partial software fix: increase Sharpening Sigma (4.0-6.0).
+  E2. Patient movement during exposure
+      - Indicator: Motion blur — directional smearing visible.
+      - Fix: Reshoot. Software cannot correct motion blur.
+  E3. Sharpening Sigma too HIGH with Weight too LOW
+      - Indicator: Broad blur radius applied but not enough weight to overcome it.
+      - Fix: Reduce Sigma to 2.0-3.0 and increase Weight to 0.75-0.85.
+  E4. Processing order error: Sharpening applied before Normalization
+      - NOTE for AI: Processing chain is fixed (Noise Filter → Normalize → Sharpen → Gamma).
+      - If user reports sharpening had no effect, check that AN is active and applied first.
+
+---
+
+### SYMPTOM F: Rotation or flip wrong in final image
+
+DIFFERENTIAL:
+  F1. Software is in FUSE integration list
+      - FUSE list (Jazz settings IGNORED): CDR DICOM, Carestream, Dentrix Ascend,
+        DEXIS, Eaglesoft, Sidexis, Vixwin.
+      - Fix: Use the HOST SOFTWARE's native rotation/flip controls. Jazz settings have
+        no effect on FUSE integrations because the driver emulates a native sensor.
+        This is NOT a Jazz configuration problem.
+  F2. Software is TWAIN but settings not saved
+      - TWAIN list: all others (XDR, Edge Cloud, Curve Hero, etc.)
+      - Fix: Apply rotation in Jazz Configurator AND click "Save Settings."
+
+---
+
+### SYMPTOM G: Specific region-based artifacts (from clinical data)
+
+  MAXILLARY CANINE: High horizontal angulation error rate (26.9% in CMOS study).
+    - Root cause: Angled anatomy requires careful cone alignment. Not a software problem.
+    - AI should flag: "This region has elevated angulation artifact risk. Confirm geometry."
+
+  MANDIBULAR CANINE: Highest overall positioning time for both sensor types.
+    - Root cause: Lingual arch anatomy and floor-of-mouth depth limit placement.
+    - AI should flag: "Ensure sensor is fully seated. OFD-related blur is common here."
+
+  MAXILLARY PREMOLAR: Most common placement error region (CMOS: 16.4%, PSP: 17.8%).
+    - Root cause: Sensor rigidity + palate anatomy. If image shows placement error,
+      this region is the highest risk. Reshoot recommendation is appropriate.
+
+  BITEWING: Lowest vertical angulation errors with CMOS (1%).
+    - Bitewing geometry is most forgiving for CMOS sensors.
+
+---
+
+## SECTION 3: ESCALATION LADDER
+
+Apply corrections in this order. Stop when the image is acceptable.
+
+  TIER 1 (Hardware check first — always):
+    Verify kVp, mAs, exposure time against quick_guide.txt recommended ranges.
+    If hardware is out of range: correct hardware BEFORE any software change.
+
+  TIER 2 (Adaptive Normalization):
+    Adjust Low and High Percentiles. Adjust S-Curve scale.
+    Low risk. Start here for most brightness/contrast symptoms.
+
+  TIER 3 (CLAHE):
+    Adjust Clip Limit (1.50-2.50) and Region grid.
+    Medium risk. Amplifies noise if mAs is low. Check mAs before increasing clip limit.
+
+  TIER 4 (Gamma):
+    Adjust in 0.05 increments. Range 0.35-0.85.
+    Affects mid-tones only. Lower = brighter mid-tones. Higher = darker mid-tones.
+
+  TIER 5 (Sharpening):
+    Adjust Sigma and Weight carefully.
+    High risk on noisy images (low mAs). Check noise first.
+
+  TIER 6 (Manual Contrast / Brightness) — LAST RESORT ONLY:
+    Only if Tiers 1-5 have failed to resolve the issue.
+    Contrast range [0.00-0.10]. Brightness range [-0.10 to 0.10].
+    Changes are linear and non-selective — they affect the entire image uniformly.

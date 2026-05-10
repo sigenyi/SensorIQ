@@ -1,0 +1,120 @@
+# JAZZ CMOS SENSOR PHYSICAL MODEL
+# Source: DEXIS Platinum (equivalent CMOS architecture) + published CsI/CMOS research
+# Purpose: Provide mechanistic sensor understanding so AI can reason beyond pattern data
+
+---
+
+## SECTION 1: SENSOR ARCHITECTURE (What the hardware is)
+
+TYPE: Indirect-conversion CMOS Active Pixel Sensor (APS)
+
+SIGNAL CHAIN (in order):
+  X-ray photons
+  → CsI:Tl (Cesium Iodide) columnar scintillator converts X-ray to visible light
+  → Fiber optic plate transmits light to CMOS surface (preserves spatial resolution)
+  → CMOS photodiode array converts light to electrical charge
+  → 14-bit Analog-to-Digital Converter (ADC) outputs a digital gray value
+
+ADC OUTPUT: 14-bit depth = 16,384 discrete gray levels (0 = black, 16,383 = white)
+DISPLAYED GRAY SCALE: 16,000+ shades (published spec for DEXIS Platinum class sensors)
+RESOLUTION: 20+ line pairs per millimeter (lp/mm)
+
+---
+
+## SECTION 2: SENSOR RESPONSE CURVE (How it behaves)
+
+LINEARITY RULE (Critical for AI):
+  - The CMOS APS response to X-ray dose is LINEAR across the usable exposure range.
+  - Research-confirmed R² ≈ 0.998 for CsI-coupled CMOS detectors.
+  - This means: doubling mAs doubles the raw pixel signal value proportionally.
+  - This linearity holds from ~5% to ~88% of the sensor's dynamic range.
+
+SATURATION THRESHOLD: ~88% of dynamic range (research-established ceiling).
+  - In 14-bit terms: saturation begins approaching pixel values of ~14,400 ADU.
+  - Above this point: the sensor clips. Software CANNOT recover clipped data.
+  - RULE FOR AI: If a symptom suggests the sensor is saturated (e.g., large flat white
+    regions with no internal detail at all), this is a HARDWARE problem, NOT a software
+    problem. No amount of CLAHE or Gamma adjustment can recover data that was never stored.
+
+DARK NOISE / FLOOR:
+  - At the low end, the sensor has a noise floor (~200 ADU equivalent at low exposure).
+  - Very low mAs exposures push signal toward the noise floor, producing "Quantum Mottle"
+    (grainy appearance). This is real stochastic noise in the signal, not a software artifact.
+  - Software CAN partially mitigate noise floor effects (via Adaptive Normalization and
+    conservative CLAHE) but cannot eliminate them.
+
+---
+
+## SECTION 3: WHAT kVp AND mAs DO TO THE RAW PIXEL VALUES
+
+kVp Effect on Pixel Distribution:
+  - Low kVp (60-65): High-energy photons are preferentially absorbed by dense structures.
+    Result: Wide histogram — bright whites (enamel) and dark blacks (air) with little gray.
+    The histogram shows two distinct peaks (bimodal).
+  - High kVp (70+): More photons penetrate all structures. Result: Compressed histogram —
+    all pixel values cluster toward the mid-gray range. The image looks "flat."
+  - Very High kVp (85+): Over-penetration risk. Nearly all photons reach the detector
+    regardless of tissue density. Histogram collapses to a single narrow peak near mid-range.
+
+mAs Effect on Pixel Values:
+  - Low mAs: Fewer photons → lower raw signal → histogram shifts LEFT (darker).
+    The low-signal region has high relative noise (Quantum Mottle visible).
+  - High mAs: More photons → higher raw signal → histogram shifts RIGHT (brighter).
+  - Over-exposure (mAs too high): Histogram pile-up at right edge = sensor saturation.
+    BRIGHT FLAT ZONES with NO RECOVERABLE DETAIL.
+
+COMBINED EFFECT TABLE:
+  | Condition              | Histogram Shape     | Dominant Problem      | Fixable in Software? |
+  |------------------------|---------------------|-----------------------|----------------------|
+  | Low kVp, correct mAs   | Bimodal, wide       | None (optimal)        | N/A                  |
+  | High kVp, correct mAs  | Single peak, narrow | Flat/gray image       | Yes (CLAHE + Gamma)  |
+  | Low mAs, any kVp       | Shifted left        | Noise / grainy        | Partial (Denoise)    |
+  | High mAs, low kVp      | Right-shifted       | Too bright (not clipped)| Yes (AN Percentile)  |
+  | Very high mAs OR kVp   | Right-clipped       | Saturation / burnout  | NO (data lost)       |
+
+---
+
+## SECTION 4: CsI SCINTILLATOR BEHAVIOR (Why fiber optics matter)
+
+- CsI:Tl scintillator converts X-ray photons to green light (~550nm peak emission).
+- The columnar microstructure of CsI acts as a light guide, reducing lateral light spread.
+  This is what gives the sensor its high resolution (20+ lp/mm).
+- If kVp is too HIGH: More energetic photons penetrate deeper into CsI, producing more
+  light per photon. This AMPLIFIES overexposure risk at the scintillator level.
+- If OFD (Object-Film Distance) is high: Geometric blur at the CsI surface — the sensor
+  receives a penumbra-broadened signal. This appears as soft edges in the image.
+  Sharpening (higher Sigma + Weight) partially compensates but cannot add true resolution.
+
+---
+
+## SECTION 5: PARAMETER INTERACTION RISK MATRIX
+# How combined software adjustments amplify or cancel each other's risks
+
+RULE: Read as "If you apply [Row], and also apply [Column], the interaction is..."
+
+  | First Applied           | Also Applied         | Interaction Effect                                    |
+  |-------------------------|----------------------|-------------------------------------------------------|
+  | CLAHE (high clip limit) | Sharpening (high W)  | DANGER: CLAHE amplifies noise → sharpening amplifies  |
+  |                         |                      | that noise again. Creates severe Quantum Mottle halos.|
+  | AN Low Percentile ↑↑   | S-Curve HIGH scale   | CANCELS: S-curve re-introduces the data AN removed.   |
+  |                         |                      | Net result: normalization has no effect. Image flat.  |
+  | Gamma < 0.50            | AN High Percentile ↑ | DANGER: Gamma darkens mid-tones while AN removes      |
+  |                         |                      | highlights. Can make bone structure disappear.        |
+  | Low mAs (hardware)      | High CLAHE clip      | DANGER: Low mAs = high noise floor. CLAHE amplifies   |
+  |                         |                      | that noise → image becomes unusable / artifact-heavy. |
+  | High kVp (hardware)     | Low Gamma (< 0.55)   | COUNTER-PRODUCTIVE: High kVp already compresses       |
+  |                         |                      | contrast. Low gamma darkens further. Double-flatten.  |
+  | Sharpening Sigma HIGH   | Sharpening Weight ↑  | DANGER: Wide blur radius + high weight = severe halo  |
+  |                         |                      | artifacts around enamel and metal restorations.       |
+  | 2x2 Binning ON          | CLAHE (fine regions) | NOTE: Binning combines 4 pixels → halves resolution.  |
+  |                         |                      | CLAHE's regional optimization becomes less meaningful.|
+
+SAFE COMBINATIONS:
+  - Moderate AN + Moderate CLAHE + Gamma: standard pipeline, low risk.
+  - High S-curve + Low Sharpening: for fracture hunting; acceptable.
+  - Denoising (Noise Filter) BEFORE Sharpening: always correct order; never reverse.
+
+UNSAFE COMBINATIONS (never suggest together):
+  - High CLAHE clip limit + High Sharpening Weight (on low mAs images)
+  - Multiple large-step Gamma changes + AN Percentile changes in the same session
+  - 2x2 Binning + High Sharpening (resolution is already reduced; sharpening is wasted)

@@ -1,0 +1,128 @@
+# JAZZ AI IMAGE QUALITY SUCCESS CRITERIA
+# Purpose: Define what a "good" radiograph looks like in objective, structure-based terms.
+# This gives the AI a self-validation framework so success is not purely subjective.
+# Source: Dental radiology standards + lamina dura / PDL space visibility research.
+
+---
+
+## SECTION 1: THE FIVE DIAGNOSTIC STRUCTURES
+
+A radiograph is considered diagnostically successful when these structures are visible
+and readable according to the criteria below. Match the criteria to the diagnostic goal.
+
+---
+
+### STRUCTURE 1: Lamina Dura (LD)
+- APPEARANCE: A continuous, thin, radiopaque (white) line lining the tooth socket.
+- DIAGNOSTIC VALUE: Confirms healthy periodontal attachment. Loss indicates pathology.
+- QUALITY CRITERION: LD should appear as a distinct, unbroken bright line.
+  It should be visually separable from the surrounding trabecular bone.
+- PHYSICS NOTE: LD is thin cortical bone (~0.1-0.5mm). It requires adequate kVp
+  penetration AND sufficient contrast to distinguish from adjacent structures.
+  High kVp (>75) risks washing out LD visibility — it blends into surrounding gray.
+- SOFTWARE OPTIMIZATION: CLAHE (local contrast) is the primary tool for LD visibility.
+  Clip Limit 2.0-2.5 helps isolate the dense cortical line from cancellous bone.
+- FAILURE MODE: LD disappears or merges with bone → image is diagnostically inadequate.
+
+---
+
+### STRUCTURE 2: Periodontal Ligament (PDL) Space
+- APPEARANCE: A thin, even radiolucent (dark) line between the root and lamina dura.
+  Clinical width: 0.15-0.38mm in health.
+- DIAGNOSTIC VALUE: PDL widening indicates inflammation, trauma, or occlusal pathology.
+  PDL space is one of the most diagnostically sensitive targets in periapical imaging.
+- QUALITY CRITERION: The PDL space should be visible as a hairline dark line,
+  consistently visible along at least 2/3 of the root length.
+- PHYSICS NOTE: PDL space is extremely thin. If OFD is high (geometric blur) or
+  sharpening is insufficient, the PDL space will not be resolved.
+- SOFTWARE OPTIMIZATION:
+  - Sharpening Sigma: 3.0-5.0 (enough radius to detect the thin structure)
+  - Sharpening Weight: 0.75-1.0 (enough emphasis to make it distinct)
+  - Gamma: 0.55-0.65 (lifts shadows to reveal the dark PDL line)
+  - S-Curve: 0.70-0.85 (Soft Clip re-introduces tail data where PDL lives)
+- FAILURE MODE: PDL line not visible or continuous → image insufficient for perio diagnosis.
+
+---
+
+### STRUCTURE 3: Trabecular Bone Pattern
+- APPEARANCE: A lattice-like network of mixed radiopaque (trabeculae) and radiolucent
+  (marrow spaces) regions throughout the cancellous bone.
+- DIAGNOSTIC VALUE: Trabecular texture change indicates systemic disease, healing,
+  or pathology. It is the "background" against which caries and lesions are detected.
+- QUALITY CRITERION: The trabecular pattern should show differentiated density —
+  visible variation between bright trabeculae and dark marrow spaces.
+  A "flat gray soup" appearance means local contrast is insufficient.
+- SOFTWARE OPTIMIZATION:
+  - CLAHE is the primary tool. Acts as a "microscope" for trabecular detail.
+  - Clip Limit: 2.0-2.50 for perio/pathology work.
+  - Recipe C (Perio): 70+ kVp | CLAHE-focused | Sharpen Weight 1.0.
+- FAILURE MODE: Trabecular detail is uniform gray → CLAHE insufficient or kVp too high.
+
+---
+
+### STRUCTURE 4: Alveolar Crest
+- APPEARANCE: The coronal edge of the alveolar bone between adjacent teeth.
+- DIAGNOSTIC CRITERION: Healthy alveolar crest is 1.5-2.0mm below the
+  Cemento-Enamel Junction (CEJ). Bone loss is measurable above this threshold.
+- QUALITY CRITERION: The crest should appear as a defined radiopaque edge,
+  not a blurred or indistinct boundary.
+- FAILURE MODE: Crest boundary blurred → OFD too high or sharpening insufficient.
+
+---
+
+### STRUCTURE 5: Caries (Decay Detection)
+- APPEARANCE: Radiolucent (dark) area within enamel or dentin.
+  Interproximal caries appears as a triangular dark region at the contact point.
+- QUALITY CRITERION: For caries detection, the image must show:
+  - High contrast between enamel (very bright) and decay (dark).
+  - Sharp interproximal interfaces.
+- SOFTWARE OPTIMIZATION:
+  - Recipe A (Caries): 60-65 kVp | CLAHE 2.5 | Sharpen Weight 2.0 | Gamma 0.8.
+  - Low kVp is preferred because it maximizes enamel contrast.
+- FAILURE MODE: Enamel and decay have similar gray values → kVp too high.
+
+---
+
+## SECTION 2: DIAGNOSTIC GOAL → SUCCESS CRITERIA MATRIX
+
+| Diagnostic Goal      | Must-See Structures       | Key Settings to Verify             |
+|----------------------|---------------------------|------------------------------------|
+| Caries detection     | Enamel contrast, Dentin   | Low kVp (60-65), High CLAHE        |
+| Perio bone levels    | Alveolar crest, LD, Trab. | High kVp (70+), CLAHE, Gamma ~0.65 |
+| Endo (root canal)    | Apex, Canal, PDL space    | Gamma 0.5, High Sigma sharpening   |
+| Fracture detection   | PDL space, Crown cracks   | S-Curve 0.85-0.90, Gamma 0.40-0.50 |
+| Post-op / healing    | Trabecular pattern        | Balanced: CLAHE 2.0, Gamma 0.65    |
+
+---
+
+## SECTION 3: MINIMUM ACCEPTABLE IMAGE STANDARD
+
+An image is NOT diagnostically acceptable if ANY of the following are true:
+  - Large areas of pure white with no internal structure (sensor saturation)
+  - Large areas of pure black with no visible anatomy (underexposure)
+  - Lamina dura is completely invisible across all teeth in the image
+  - PDL space cannot be resolved on any root surface
+  - Trabecular bone appears uniformly gray (no differentiation)
+  - Geometric blur is so severe that root apices are not distinguishable
+
+If an image fails any of the above, log the session as "reshoot required" and
+escalate to hardware settings adjustment before returning to software corrections.
+
+---
+
+## SECTION 4: HOW TO USE LOGGED SUCCESS DATA
+
+When a calibration is logged as successful in Google Sheets, the accompanying
+settings string represents a VALIDATED parameter set for that software + machine
+combination at specific hardware settings (kVp / mA / exposure).
+
+VALID BASELINE CONDITIONS:
+  - The logged settings are valid for similar hardware (±5 kVp, ±1 mA, ±0.02s).
+  - If hardware changes significantly, treat as a new baseline.
+  - A successful log does NOT mean the settings are optimal for a different
+    diagnostic goal (e.g., caries settings are not optimal for endo).
+
+LOG QUALITY SIGNAL:
+  - "Client happy" = subjective acceptance. Moderate confidence.
+  - "Lamina dura visible, PDL confirmed" = objective acceptance. High confidence.
+  - Prefer logging with structure-specific confirmations for higher-quality training data.
