@@ -21,8 +21,8 @@ FORMAT: Hierarchical Knowledge Schema (HKS)
 
 # INVERSE_PROPORTIONALITY_LAWS:
 - RULE: Density is the product of Quality (kV) and Quantity (mAs).
-- MECHANICAL ADJUSTMENT: If a technician increases kV by 10 (increasing penetration), the AI must recommend a compensatory increase in Gamma (>1.0) or a decrease in mAs to prevent a "washed out" gray appearance.
-- FORMULA: Higher Energy (kV) = Lower Contrast. To restore visual "snap" after a kV increase, the software must tighten the S-Curve or increase the CLAHE Clip Limit.
+- MECHANICAL ADJUSTMENT: If a technician increases kV by 10 (increasing penetration), the AI must recommend a compensatory increase in Gamma toward its 0.85 maximum (higher Gamma = darker mid-tones) or a decrease in mAs to prevent a "washed out" gray appearance. NOTE: Gamma is capped at 0.85, so it can only darken toward neutral — pair it with CLAHE or a Hard-Clip S-Curve when Gamma alone is not enough.
+- FORMULA: Higher Energy (kV) = Lower Contrast. To restore visual "snap" after a kV increase, lower the S-Curve scale toward 0.30 (Hard Clip) or increase the CLAHE Clip Limit.
 
 # GEOMETRIC_INTEGRITY: DISTANCE_FACTORS
 - FFD (Focal-Film Distance): Affects magnification and intensity. 
@@ -74,8 +74,8 @@ FORMAT: Hierarchical Knowledge Schema (HKS)
   - Logic: High Weight = High Edge Emphasis.
   - Risks: "Halo Artifacts" around metal or dense enamel; can create "False Fractures."
 - Gamma:
-  - Logic: < 1.0 (Brightens mid-tones); > 1.0 (Darkens mid-tones).
-  - Use: Corrects for over-penetration (High kV) or under-exposure (Low mAs).
+  - Logic: The Jazz Gamma range (0.35-0.85) is entirely below 1.0. LOWER values brighten mid-tones; HIGHER values darken them. Capped at 0.85, so it can lighten strongly but only darken toward neutral.
+  - Use: Lower Gamma to correct under-exposure (Low mAs, image too dark); raise Gamma toward 0.85 to counter over-penetration (High kV, image too bright/flat).
 
 --- SECTION 4: AI DIAGNOSTIC DECISION MATRIX ---
 
@@ -84,7 +84,8 @@ FORMAT: Hierarchical Knowledge Schema (HKS)
     - AVOID: High Sharpening (amplifies noise).
 
 > IF Image_Uniform_Gray (High kV): 
-    - PRIORITY: Increase Contrast + Adjust Gamma (>1.0).
+    - PRIORITY: Increase local contrast (CLAHE / Hard-Clip S-Curve) + raise Gamma toward 0.85 to darken mid-tones.
+    - NOTE: Gamma is capped at 0.85, so it cannot fully restore contrast alone — rely primarily on CLAHE.
     - AVOID: Over-Normalization (may wash out gray values further).
 
 > IF Image_Blurry (High OFD):

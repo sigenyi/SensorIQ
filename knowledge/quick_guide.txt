@@ -20,7 +20,7 @@
 - Recipe D (Fracture Hunter): 
     Goal: Visualize hairline cracks.  
     Step 1: Increase S-Curve Scale to 0.85 - 0.90 to re-introduce the "raw" tail data.  
-    Step 2: Lower Gamma to 0.40 - 0.50 to darken mid-tones, making the structural breaks in the tooth more apparent.
+    Step 2: Lower Gamma to 0.40 - 0.50 to lift mid-tones and shadow detail (lower Gamma = brighter), revealing the re-introduced tail data so the structural breaks in the tooth become more apparent.
 
 # TROUBLESHOOTING LOGIC
 Issue: Grainy/Pixelated:

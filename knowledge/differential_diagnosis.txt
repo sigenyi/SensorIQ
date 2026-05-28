@@ -33,9 +33,9 @@ DIFFERENTIAL (ordered by likelihood):
       - Indicator: kVp above 80. Image is bright AND flat (low contrast).
       - Key distinguishing feature: BOTH bright AND gray/flat simultaneously.
       - Fix: Reduce kVp to 70 baseline, then adjust.
-  A4. Gamma too high (> 0.75)
-      - Indicator: Mid-tones are bright, highlights blown.
-      - Fix: Reduce Gamma toward 0.65 baseline.
+  A4. Gamma too low (< 0.55)
+      - Indicator: Lower Gamma brightens mid-tones; values near 0.35 over-brighten the image.
+      - Fix: Increase Gamma toward 0.65 baseline to darken mid-tones.
 
   CRITICAL RULE: If the white areas have ZERO internal detail (completely flat), this is
   sensor saturation. DO NOT attempt software corrections. Inform tech the hardware exposure
@@ -53,9 +53,9 @@ DIFFERENTIAL:
       - Indicator: Exposure time below recommended. Image also grainy (Quantum Mottle).
       - Distinguishing test: Is the image ALSO grainy/noisy? If YES → underexposure.
       - Fix: Increase exposure time per quick_guide.txt. Use Noise Filter before any other step.
-  B3. Gamma too low (< 0.45)
-      - Indicator: Mid-tones crushed dark. Extreme shadows throughout.
-      - Fix: Increase Gamma toward 0.65 baseline.
+  B3. Gamma too high (> 0.75)
+      - Indicator: Higher Gamma darkens mid-tones; values near 0.85 crush mid-tones and shadows.
+      - Fix: Reduce Gamma toward 0.65 baseline to brighten mid-tones.
   B4. 2x2 Binning OFF when it should be ON (weak X-ray source)
       - Indicator: Hand-held unit. Image consistently dark across sessions.
       - Fix: Enable 2x2 Binning to increase sensitivity.

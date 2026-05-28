@@ -35,7 +35,14 @@ Extreme Changes: Do not suggest jumps larger than 20% unless the user describes 
     XDR, Edge Cloud, Curve Hero, Planmeca Romexis, Oryx, Tigerview, Tracker, iDental, 
     Clio, DTX Studio, SOTA, EzDent-i, Open Dental, Tab32, SOPRO, Mipacs, 
     Denticon XV Capture, Denticon XV Web, CliniView, Dentiray Capture, Imaging XL, 
-    Prof. Suni, Xray Vision, SIGMA, PatientGallery, Xelis Dental, MiPACS, Overjet, Aeka.
+    Prof. Suni, Xray Vision, SIGMA, PatientGallery, Xelis Dental, Overjet, Aeka, 
+    CLASSIC, Archy, Mogo, Acteon, VisionX, OneView, Umbie DentalCare, Harmony.
+
+- DEFAULT FOR UNLISTED SOFTWARE: Any imaging software not named in the FUSE list above
+    (including the "OTHER" option) is treated as TWAIN by default — Jazz rotation/flip
+    settings should take effect. Confirm by applying a rotation in the Jazz Configurator,
+    clicking "Save Settings," and checking that it persists in the final image. If it does
+    NOT persist, treat that software as FUSE and use the host software's native rotation controls.
 
 # 3. CLAHE (LOCALIZED CONTRAST)
 - Clip Limit: Max contrast enhancement. Range [1.50 - 2.50]; Default: 2.00.
@@ -43,10 +50,10 @@ Extreme Changes: Do not suggest jumps larger than 20% unless the user describes 
 
 # 4. IMAGE SHARPENING (EDGE ENHANCEMENT)
 - Sigma: Blur radius. Range [2.0 - 10.0]; Default: 2.0.
-- Weight: Sharpening strength. Range [0.55 - 1.50]; Default: 0.65.
+- Weight: Sharpening strength. Range [0.55 - 2.00]; Default: 0.65. (High weights up to 2.00 are used for aggressive edge work, e.g. the Caries recipe.)
 
 # 5. GAMMA & MANUAL ADJUSTMENTS
-- Gamma Level: Mid-tone luminance. Range [.35 - .85]; Default: 0.65.
+- Gamma Level: Mid-tone luminance. Range [.35 - .85]; Default: 0.65. DIRECTION: Lower value = BRIGHTER mid-tones; higher value = DARKER mid-tones. The entire range is below 1.0 and the control is capped at 0.85, so Gamma can brighten strongly but can only darken toward neutral — it cannot fully darken a heavily over-penetrated image on its own.
 - Manual Contrast: Range [0.00 - 0.10]; Default: 0.00.
 - Manual Brightness: Range [-0.10 - 0.10]; Default: 0.00.
 

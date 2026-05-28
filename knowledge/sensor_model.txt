@@ -98,12 +98,15 @@ RULE: Read as "If you apply [Row], and also apply [Column], the interaction is..
   |                         |                      | that noise again. Creates severe Quantum Mottle halos.|
   | AN Low Percentile ↑↑   | S-Curve HIGH scale   | CANCELS: S-curve re-introduces the data AN removed.   |
   |                         |                      | Net result: normalization has no effect. Image flat.  |
-  | Gamma < 0.50            | AN High Percentile ↑ | DANGER: Gamma darkens mid-tones while AN removes      |
-  |                         |                      | highlights. Can make bone structure disappear.        |
+  | Gamma < 0.50            | AN High Percentile ↑ | DANGER: Low Gamma strongly BRIGHTENS mid-tones; AN    |
+  |                         |                      | clips the brightest data → dense bone/enamel detail   |
+  |                         |                      | can be washed out and lost.                           |
   | Low mAs (hardware)      | High CLAHE clip      | DANGER: Low mAs = high noise floor. CLAHE amplifies   |
   |                         |                      | that noise → image becomes unusable / artifact-heavy. |
-  | High kVp (hardware)     | Low Gamma (< 0.55)   | COUNTER-PRODUCTIVE: High kVp already compresses       |
-  |                         |                      | contrast. Low gamma darkens further. Double-flatten.  |
+  | High kVp (hardware)     | Low Gamma (< 0.55)   | COUNTER-PRODUCTIVE: High kVp compresses contrast to   |
+  |                         |                      | mid-gray. Low Gamma BRIGHTENS that mid-gray mass      |
+  |                         |                      | further toward washed-out white. Raise Gamma toward   |
+  |                         |                      | 0.85 + add CLAHE instead.                             |
   | Sharpening Sigma HIGH   | Sharpening Weight ↑  | DANGER: Wide blur radius + high weight = severe halo  |
   |                         |                      | artifacts around enamel and metal restorations.       |
   | 2x2 Binning ON          | CLAHE (fine regions) | NOTE: Binning combines 4 pixels → halves resolution.  |
