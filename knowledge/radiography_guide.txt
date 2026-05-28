@@ -12,6 +12,15 @@ FORMAT: Hierarchical Knowledge Schema (HKS)
 - OVER-EXPOSURE (Too High): Image is too dark (burnout).
 - AI_REFORMATTING_LOGIC: If mAs is low, AI must use aggressive Denoising but conservative CLAHE to avoid amplifying artifacts.
 
+# EXPOSURE_TIME_UNITS_AND_PULSES
+- Exposure time is the same physical quantity no matter how a machine labels it. It may be entered as:
+  - SECONDS (decimal): modern machines, e.g. 0.10 s.
+  - MILLISECONDS: e.g. 100 ms = 0.10 s (ms / 1000 = seconds).
+  - FRACTIONS of a second: older machines, e.g. 1/2 s = 0.5 s, 1/10 s = 0.10 s, 1/60 s = 0.0167 s.
+  - PULSES: pulsed machines (e.g. Gendex 770) deliver radiation in discrete pulses. ONE PULSE = 1/60 s = 0.0167 s. Total exposure time = (number of pulses) x 0.0167 s. Example: 6 pulses = 0.10 s.
+- DOSE EQUIVALENCE: All units reduce to total exposure time in seconds, which combines with mA to give mAs (mAs = mA x seconds). The sensor response and saturation ceiling are identical regardless of the label — more total time (more pulses, longer fraction, more ms) = more dose = brighter/denser image and higher saturation risk. Reason about dose in seconds/mAs internally.
+- RECOMMENDING CHANGES (CRITICAL): Always advise an exposure change in the technician's OWN unit. Convert the second-based quick_guide ranges into that unit first. For a pulsed machine, recommend in PULSES (e.g. "increase from 6 to 7 pulses = ~0.117 s"). For a fraction machine, recommend a fraction (e.g. "shorten from 1/8 s to 1/10 s"). For ms, recommend in ms. Never force decimal seconds on a tech whose machine does not use them.
+
 # EXPOSURE_FACTOR_QUALITY: kV (Kilovoltage)
 - DEFINITION: Voltage across the tube; determines photon energy (penetration).
 - PENETRATION: Higher kV penetrates dense tissue better but reduces soft tissue contrast.

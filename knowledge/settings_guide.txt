@@ -1,6 +1,10 @@
 # JAZZ SENSOR GLOBAL CONFIGURATION
-Gradual Adjustments: All software setting changes must be suggested in 5-10% increments.
-Extreme Changes: Do not suggest jumps larger than 20% unless the user describes the image as "unusable," "completely black," or "completely white."
+Change Sizing: Match the magnitude of each change to how far the image is from acceptable. For fine-tuning a nearly-correct image, use small ~5-10% steps. When the image is clearly off, make ONE decisive, correctly-sized move rather than several timid ones — chronic under-correction wastes the technician's time and erodes trust in the tool. The only hard limit is safety: do not make a jump so large that it risks clipping highlights/shadows or pushing the sensor toward saturation. For images described as "unusable," "completely black," or "completely white," large corrective moves are expected and appropriate.
+
+Hardware & Binning Discipline: This tool calibrates POST-CAPTURE SOFTWARE settings. Do NOT reflexively change exposure time or enable 2x2 Binning when a fix is hard to find or when several refinements have already been tried.
+- Recommend an exposure-time change ONLY for genuine under-exposure, over-exposure, or sensor saturation, verified against the quick_guide exposure ranges.
+- Recommend 2x2 Binning ONLY for a weak X-ray source or a diagnosed case of sensor fatigue (see quick_guide).
+- In all other cases, resolve the issue within the software escalation ladder first: AN -> CLAHE -> Gamma -> Sharpening -> Contrast/Brightness (last resort).
 
 - 2x2 Binning: Combines 4 pixels to 1. Increases sensitivity/brightness; decreases resolution. Use only for weak X-ray sources.
 - Resend Last Image: Reprocesses previous capture with current settings.
@@ -14,9 +18,10 @@ Extreme Changes: Do not suggest jumps larger than 20% unless the user describes 
 - High Percentile (Highlight Removal): Removes the "Peaks" or brightest levels.  
     - Logic: Setting value N removes N% of the brightest data levels.  
     - Use: Increase to reduce "blown-out" or overexposed areas.; Default: 99.
-- S-Curve: Controls the inclusion of the "tails" (the data just removed by the percentiles).  
-    - Low Scale (0.10 - 0.30): "Hard Clip." Keeps data removed. Best for standard bone/caries checks.  
-    - High Scale (0.70 - 0.90): "Soft Clip." Intentionally re-introduces the removed tails. Vital for seeing hairline fractures that are otherwise "clipped".
+- S-Curve: Controls how much of the "tail" data trimmed by the Low and High Percentiles (data removed from BOTH the dark and bright ends) is saved back into the image.
+    - PRINCIPLE: The HIGHER the S-Curve scale, the more of that removed tail data is preserved, producing more BALANCED, gradual shading across the full tonal range. The LOWER the scale, the more data stays clipped, producing punchier local contrast ("snap").
+    - Low Scale (0.10 - 0.30): "Hard Clip." Keeps data removed for higher contrast. Best for standard bone/caries checks.
+    - High Scale (0.70 - 0.90): "Soft Clip." Saves more removed tail data for balanced shading. Vital for recovering shadow/highlight detail and for seeing hairline fractures that would otherwise be "clipped".
 
 ## THE CLIPPING THRESHOLD (DATA LOSS LIMITS)
 - CRITICAL BOUNDARY: High Percentile values > 97% or Low Percentile values > 5%.
@@ -36,7 +41,7 @@ Extreme Changes: Do not suggest jumps larger than 20% unless the user describes 
     Clio, DTX Studio, SOTA, EzDent-i, Open Dental, Tab32, SOPRO, Mipacs, 
     Denticon XV Capture, Denticon XV Web, CliniView, Dentiray Capture, Imaging XL, 
     Prof. Suni, Xray Vision, SIGMA, PatientGallery, Xelis Dental, Overjet, Aeka, 
-    CLASSIC, Archy, Mogo, Acteon, VisionX, OneView, Umbie DentalCare, Harmony.
+    CLASSIC, Archy, Mogo, Acteon, VisionX, OneView, Umbie DentalCare, Harmony, CareStack.
 
 - DEFAULT FOR UNLISTED SOFTWARE: Any imaging software not named in the FUSE list above
     (including the "OTHER" option) is treated as TWAIN by default — Jazz rotation/flip
@@ -46,7 +51,7 @@ Extreme Changes: Do not suggest jumps larger than 20% unless the user describes 
 
 # 3. CLAHE (LOCALIZED CONTRAST)
 - Clip Limit: Max contrast enhancement. Range [1.50 - 2.50]; Default: 2.00.
-- Num Regions X/Y: Grid tiles for local optimization. Range [4 - 8]; Default: 6x6.
+- Num Regions X/Y: Grid tiles for local contrast optimization. Range [2 - 8] (i.e. 2x2 up to 8x8); Default: 6x6. A FINER grid (7x7-8x8) sharpens small-scale local detail — best for trabecular bone, PDL space, and perio work. A COARSER grid (2x2-4x4) gives broader, smoother contrast — best for general/whole-image balance. ALWAYS set both Num Regions X and Y whenever CLAHE is adjusted; never leave them implied or unchanged by default.
 
 # 4. IMAGE SHARPENING (EDGE ENHANCEMENT)
 - Sigma: Blur radius. Range [2.0 - 10.0]; Default: 2.0.

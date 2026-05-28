@@ -8,6 +8,13 @@
 - Pre-molars & Canines: 0.20 - 0.30
 - Incisors: 0.17 - 0.23
 
+# EXPOSURE UNIT CONVERSION (for fraction & pulse machines)
+- The ranges above are in SECONDS. Convert them into the machine's own unit before recommending a change.
+- 1 PULSE = 1/60 s = 0.0167 s (e.g. Gendex 770). Total time = pulses x 0.0167 s.
+- FRACTIONS: 1/2 s = 0.5 | 1/10 s = 0.10 | 1/30 s = 0.033 | 1/60 s = 0.0167.
+- MILLISECONDS: ms / 1000 = seconds (100 ms = 0.10 s).
+- Wall-Mount ranges in PULSES (quick reference): Molars 0.120-0.170 s = 7-10 pulses; Pre-molars/Canines 0.080-0.110 s = 5-7 pulses; Incisors 0.070-0.090 s = 4-5 pulses.
+
 # HARDWARE FUNDAMENTALS
 - Low kVp (60-65): High contrast; best for Caries detection.
 - High kVp (70+): Long gray scale; best for Periodontal bone levels.
