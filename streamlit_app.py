@@ -6,7 +6,16 @@ from streamlit_gsheets import GSheetsConnection
 
 # --- 1. SETUP ---
 SONNET_MODEL = "claude-sonnet-4-20250514"
-HAIKU_MODEL  = "claude-haiku-4-5-20251001"
+HAIKU_MODEL = "claude-haiku-4-5-20251001"
+
+# Behavioral rules shared by BOTH models so guidance and tone stay consistent.
+SHARED_RULES = """
+CHANGE SIZING: Match the size of each change to how far the image is from acceptable. Use small ~5-10% steps to fine-tune a nearly-correct image, but make ONE decisive, correctly-sized move when the image is clearly off — do not under-correct out of caution. The only hard limit is safety: never make a jump that risks clipping highlights/shadows or pushing the sensor toward saturation.
+HARDWARE & BINNING DISCIPLINE: This is a post-capture SOFTWARE tool. Do NOT default to changing exposure time or enabling 2x2 Binning when a fix is hard to find or when several refinements have been tried. Recommend an exposure-time change ONLY for genuine under/over-exposure or saturation (verified against quick_guide ranges); recommend 2x2 Binning ONLY for a weak X-ray source or diagnosed sensor fatigue. Otherwise work the software ladder first: AN -> CLAHE -> Gamma -> Sharpening -> Contrast/Brightness (last resort).
+CLAHE: Whenever you adjust CLAHE, you MUST specify BOTH Clip Limit AND Num Regions X/Y (range 2-8, i.e. 2x2 to 8x8). Use finer grids (7x7-8x8) for trabecular/PDL/perio detail; coarser grids (2x2-4x4) for broad, smooth contrast. Never omit Num Regions.
+EXPOSURE UNITS: Exposure may be given in seconds, milliseconds, a fraction (1/n s), or pulses (1 pulse = 1/60 s = 0.0167 s). If you recommend an exposure change, express it in the SAME unit the technician is using (e.g. "+1 pulse -> 7 pulses = ~0.117 s", "shorten to 1/10 s"). Convert the second-based quick_guide ranges into that unit first.
+GAMMA: Lower Gamma = brighter mid-tones; higher Gamma = darker mid-tones. Range 0.35-0.85 (capped at 0.85).
+"""
 
 try:
     client = anthropic.Anthropic(api_key=st.secrets["CLAUDE_KEY"])
@@ -15,7 +24,6 @@ except Exception:
     st.stop()
 
 conn = st.connection("gsheets", type=GSheetsConnection)
-
 
 # --- 2. HELPERS ---
 def load_technical_manuals():
@@ -34,7 +42,6 @@ def load_technical_manuals():
                 combined += f"\n--- {path.upper()} ---\n{f.read()}\n"
     return combined if combined else "Technical manuals not found."
 
-
 def check_saturation_risk(kvp, ma, exposure, machine):
     warnings = []
     mas = round(ma * exposure, 3)
@@ -50,9 +57,8 @@ def check_saturation_risk(kvp, ma, exposure, machine):
             warnings.append(f"mAs={mas} is elevated for a hand-held unit. Saturation risk.")
     return warnings
 
-
 def get_ai_baseline(software, machine, hardware_specs, diagnostic_goal, df, knowledge):
-    history  = df[(df['software'] == software) & (df['machine'] == machine)]
+    history = df[(df['software'] == software) & (df['machine'] == machine)]
     past_logs = history.tail(10).to_string(index=False) if not history.empty else "No history found."
 
     prompt = f"""
@@ -74,11 +80,15 @@ RULES:
 - Verify parameter combinations against the interaction matrix in sensor_model.txt.
 - Radiopaque (bone/enamel) = White. Radiolucent (air/decay) = Black.
 - Never suggest Contrast/Brightness unless it is a last resort.
+{SHARED_RULES}
 
-OUTPUT FORMAT — return exactly this, nothing else:
-Hardware: [Safe or flag the specific risk]
-[Each setting on its own line: "SettingName: Value"]
-Goal optimized for: [1 short phrase]
+OUTPUT — return EXACTLY this structure, nothing else:
+HARDWARE: [Safe — or flag the specific risk in one short line]
+SETTINGS:
+- [SettingName]: [value]
+- [SettingName]: [value]
+- CLAHE Regions: [XxY]   (include this line whenever CLAHE is part of the baseline)
+NOTES: [Goal optimized for, plus any one-line caution. Keep it brief.]
 """
     try:
         response = client.messages.create(
@@ -89,7 +99,6 @@ Goal optimized for: [1 short phrase]
         return response.content[0].text.strip()
     except Exception as e:
         return f"Baseline unavailable — {str(e)}"
-
 
 def get_ai_refinement(software, machine, hardware_specs, diagnostic_goal,
                       current_baseline, refinement_history, new_feedback, knowledge):
@@ -102,13 +111,13 @@ def get_ai_refinement(software, machine, hardware_specs, diagnostic_goal,
 
     prompt = f"""
 You are a Dental Imaging Specialist. Give a short, direct answer — cause and changes only.
-
 Setup: {software} | {machine}
 Hardware: {hardware_specs}
 Diagnostic Goal: {diagnostic_goal}
 Current Baseline: {current_baseline}
 
 {history_block}
+
 NEW ISSUE: {new_feedback}
 
 KNOWLEDGE BASE:
@@ -119,15 +128,15 @@ REASONING (do this silently — do NOT write out the steps in your answer):
 - Map symptom to differential_diagnosis.txt categories A-G. Find root cause.
 - Follow escalation order: hardware first, then AN, CLAHE, Gamma, Sharpening, Contrast/Brightness last.
 - Check parameter interaction matrix in sensor_model.txt Section 5.
+{SHARED_RULES}
 
-OUTPUT — return exactly this format, nothing more, nothing less:
-
-Likely cause: [One sentence maximum.]
-Changes to make:
+OUTPUT — return EXACTLY this structure, nothing more, nothing less:
+CAUSE: [One sentence maximum.]
+SETTINGS:
 - [Setting]: [old value] → [new value]
 - [Setting]: [old value] → [new value]
-Watch for: [One sentence risk warning, or "None".]
-
+- CLAHE Regions: [oldXxY] → [newXxY]   (include this line whenever you change CLAHE)
+NOTES: [One-line risk warning, or "None".]
 ---LOGDATA---
 LOG_ISSUE:[concise_snake_case_tag]
 LOG_SETTINGS:[SettingName: Value, SettingName: Value, SettingName: Value]
@@ -143,18 +152,16 @@ LOG_SETTINGS:[SettingName: Value, SettingName: Value, SettingName: Value]
     except Exception as e:
         return f"Analysis error — {str(e)}"
 
-
 def parse_refinement_response(full_text):
     """Split on delimiters so display text and log data never bleed into each other."""
-    log_issue    = "general"
+    log_issue = "general"
     log_settings = "none"
     display_text = full_text  # safe fallback
 
     if "---LOGDATA---" in full_text and "---ENDLOG---" in full_text:
-        parts        = full_text.split("---LOGDATA---")
+        parts = full_text.split("---LOGDATA---")
         display_text = parts[0].strip()
-        log_block    = parts[1].split("---ENDLOG---")[0].strip()
-
+        log_block = parts[1].split("---ENDLOG---")[0].strip()
         for line in log_block.splitlines():
             line = line.strip()
             if line.startswith("LOG_ISSUE:"):
@@ -164,16 +171,15 @@ def parse_refinement_response(full_text):
 
     return display_text, log_issue, log_settings
 
-
 def log_to_google_sheets(software, machine, issue, settings, notes):
     try:
         existing_data = conn.read()
         new_entry = pd.DataFrame([{
-            "machine":  machine,
+            "machine": machine,
             "software": software,
-            "issue":    issue,
+            "issue": issue,
             "settings": settings,
-            "notes":    notes.strip() if notes.strip() else "none",
+            "notes": notes.strip() if notes.strip() else "none",
         }])
         updated_df = pd.concat([existing_data, new_entry], ignore_index=True)
         conn.update(data=updated_df)
@@ -183,7 +189,6 @@ def log_to_google_sheets(software, machine, issue, settings, notes):
         st.error(f"Database error: {e}")
         return False
 
-
 def full_reset():
     for k in ['baseline_generated', 'current_baseline', 'last_setup',
               'refinement_history', 'last_issue', 'last_settings']:
@@ -191,14 +196,12 @@ def full_reset():
             del st.session_state[k]
     st.toast("Reset complete.")
 
-
 # --- 3. LOAD DATA ---
 knowledge_context = load_technical_manuals()
 try:
     df_history = conn.read()
 except Exception:
     df_history = pd.DataFrame(columns=['machine', 'software', 'issue', 'settings', 'notes'])
-
 
 # --- 4. UI CONFIG ---
 st.set_page_config(page_title="Jazz AI Image Quality", page_icon="🦷")
@@ -221,11 +224,9 @@ div[data-testid="stTextArea"] textarea {
 
 st.title("🦷 Jazz AI Image Quality Assistant")
 
-
 # --- 5. SIDEBAR ---
 st.sidebar.header("Initial Setup")
 machine = st.sidebar.selectbox("X-ray Source", ["Select...", "Wall-mounted", "Hand-held"], index=0)
-
 software_options = ["Select..."] + sorted([
     "CDR DICOM", "Carestream", "Dentrix Ascend", "DEXIS", "Eaglesoft", "Sidexis", "Vixwin",
     "XDR", "Edge Cloud", "Curve Hero", "Planmeca Romexis", "Oryx", "Tigerview", "Tracker",
@@ -233,16 +234,42 @@ software_options = ["Select..."] + sorted([
     "Mipacs", "Denticon XV Capture", "Denticon XV Web", "CliniView", "Dentiray Capture",
     "Imaging XL", "Prof. Suni", "Xray Vision", "SIGMA", "PatientGallery", "Xelis Dental",
     "Overjet", "Aeka", "CLASSIC", "Archy", "Mogo", "Acteon", "VisionX", "OneView", "Umbie DentalCare",
-    "Harmony", "OTHER"
+    "Harmony", "CareStack", "OTHER"
 ])
 software = st.sidebar.selectbox("Imaging Software", software_options, index=0)
 
 st.sidebar.divider()
 st.sidebar.header("⚙️ Hardware Settings")
-kvp      = st.sidebar.number_input("kVp",          min_value=50,   max_value=90,   value=70)
-ma       = st.sidebar.number_input("mA",            min_value=1.0,  max_value=10.0, value=7.0,  step=0.1)
-exposure = st.sidebar.number_input("Exposure (s)",  min_value=0.01, max_value=1.00, value=0.10, step=0.01)
-hardware_context = f"kVp: {kvp}, mA: {ma}, Exposure: {exposure}s, mAs: {round(ma * exposure, 3)}"
+kvp = st.sidebar.number_input("kVp", min_value=50, max_value=90, value=70)
+ma = st.sidebar.number_input("mA", min_value=1.0, max_value=10.0, value=7.0, step=0.1)
+
+# Exposure can be entered in whatever unit the machine uses; everything below
+# is normalized to SECONDS so the mAs / saturation math is unit-agnostic.
+exp_unit = st.sidebar.selectbox(
+    "Exposure Unit",
+    ["Seconds", "Milliseconds", "Fraction (1/n s)", "Pulses"],
+    index=0
+)
+if exp_unit == "Seconds":
+    exp_val = st.sidebar.number_input("Exposure (s)", min_value=0.01, max_value=2.00, value=0.10, step=0.01)
+    exposure = exp_val
+    exposure_native = f"{exp_val:.3f} s"
+elif exp_unit == "Milliseconds":
+    exp_val = st.sidebar.number_input("Exposure (ms)", min_value=1, max_value=2000, value=100, step=1)
+    exposure = exp_val / 1000.0
+    exposure_native = f"{exp_val} ms"
+elif exp_unit == "Fraction (1/n s)":
+    n = st.sidebar.number_input("Exposure = 1/n second — enter n", min_value=1, max_value=600, value=10, step=1)
+    exposure = 1.0 / n
+    exposure_native = f"1/{n} s"
+else:  # Pulses
+    pulses = st.sidebar.number_input("Pulses (1 pulse = 1/60 s ≈ 0.0167 s)", min_value=1, max_value=60, value=6, step=1)
+    exposure = pulses * (1.0 / 60.0)
+    exposure_native = f"{pulses} pulse(s)"
+
+exposure = round(exposure, 4)
+st.sidebar.caption(f"= {exposure:.3f} s  |  mAs: {round(ma * exposure, 3)}")
+hardware_context = f"kVp: {kvp}, mA: {ma}, Exposure: {exposure_native} (= {exposure:.3f} s), mAs: {round(ma * exposure, 3)}"
 
 sat_warnings = check_saturation_risk(kvp, ma, exposure, machine if machine != "Select..." else "Wall-mounted")
 if sat_warnings:
@@ -258,50 +285,48 @@ diagnostic_goal = st.sidebar.selectbox(
     ["General / Unknown", "Caries Detection", "Periodontal Bone Levels",
      "Endodontics (Root Canal)", "Fracture Detection", "Post-op / Healing Check"]
 )
+
 st.sidebar.markdown("---")
 st.sidebar.caption("v2.1.0 | Jazz AI Support")
-
 
 # --- 6. MAIN ---
 if software == "Select..." or machine == "Select...":
     st.markdown("""
-        <div style="text-align:center; margin-top:100px;">
-            <h1 style="font-size:3.5em; margin-bottom:0;">👈 Start Here</h1>
-            <p style="font-size:1.5em; color:#666;">Select the setup on the left sidebar to begin.</p>
-        </div>
+    <div style="text-align:center; margin-top:100px;">
+        <h1 style="font-size:3.5em; margin-bottom:0;">👈 Start Here</h1>
+        <p style="font-size:1.5em; color:#666;">Select the setup on the left sidebar to begin.</p>
+    </div>
     """, unsafe_allow_html=True)
     st.stop()
-
 
 # ── STEP 1: BASELINE ──────────────────────────────────────────────────────────
 st.markdown("### 📍 Step 1: Recommended Baseline")
 current_setup_id = f"{software}-{machine}-{hardware_context}-{diagnostic_goal}"
 
 if not st.session_state.get('baseline_generated'):
-    # FIX 1 — Baseline only generates on explicit button press
+    # Baseline only generates on explicit button press
     st.info("Confirm your sidebar settings, then click **Generate Baseline**.")
     if st.button("⚡ Generate Baseline", use_container_width=True):
         with st.spinner("Synthesizing baseline..."):
-            st.session_state['current_baseline']  = get_ai_baseline(
+            st.session_state['current_baseline'] = get_ai_baseline(
                 software, machine, hardware_context, diagnostic_goal,
                 df_history, knowledge_context
             )
-            st.session_state['last_setup']        = current_setup_id
+            st.session_state['last_setup'] = current_setup_id
             st.session_state['baseline_generated'] = True
             st.session_state['refinement_history'] = []
         st.rerun()
-
 else:
     # Warn if sidebar changed after generation
     if st.session_state.get('last_setup') != current_setup_id:
         st.warning("⚠️ Setup has changed since the baseline was generated. Regenerate to match.")
         if st.button("⚡ Regenerate Baseline", use_container_width=True):
             with st.spinner("Regenerating..."):
-                st.session_state['current_baseline']  = get_ai_baseline(
+                st.session_state['current_baseline'] = get_ai_baseline(
                     software, machine, hardware_context, diagnostic_goal,
                     df_history, knowledge_context
                 )
-                st.session_state['last_setup']        = current_setup_id
+                st.session_state['last_setup'] = current_setup_id
                 st.session_state['refinement_history'] = []
             st.rerun()
 
@@ -313,7 +338,6 @@ else:
         </div>
         """, unsafe_allow_html=True)
 
-
 # ── STEP 2: REFINEMENT ────────────────────────────────────────────────────────
 if st.session_state.get('baseline_generated') and 'current_baseline' in st.session_state:
     st.markdown("---")
@@ -321,7 +345,7 @@ if st.session_state.get('baseline_generated') and 'current_baseline' in st.sessi
 
     refinement_history = st.session_state.get('refinement_history', [])
 
-    # FIX 4 — Show collapsed history of what's been tried
+    # Show collapsed history of what's been tried
     if refinement_history:
         for i, entry in enumerate(refinement_history, 1):
             label = f"Attempt {i}: {entry['feedback'][:55]}{'…' if len(entry['feedback']) > 55 else ''}"
@@ -347,13 +371,12 @@ if st.session_state.get('baseline_generated') and 'current_baseline' in st.sessi
                     knowledge_context
                 )
                 display_text, log_issue, log_settings = parse_refinement_response(raw)
-
-                # FIX 4 — Append to chain, never replace
+                # Append to chain, never replace
                 st.session_state['refinement_history'].append({
                     "feedback": user_feedback.strip(),
                     "response": display_text,
                 })
-                st.session_state['last_issue']    = log_issue
+                st.session_state['last_issue'] = log_issue
                 st.session_state['last_settings'] = log_settings
             st.rerun()
         else:
@@ -375,10 +398,10 @@ if st.session_state.get('baseline_generated') and 'current_baseline' in st.sessi
                         st.session_state.get('last_settings', 'none'),
                         tech_notes
                     )
-                    if ok:
-                        st.toast("✅ Logged successfully!")
-                        full_reset()
-                        st.rerun()
+                if ok:
+                    st.toast("✅ Logged successfully!")
+                    full_reset()
+                    st.rerun()
         with col2:
             if st.button("🔄 Start Over", use_container_width=True):
                 full_reset()
