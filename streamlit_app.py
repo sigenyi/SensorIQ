@@ -5,15 +5,31 @@ import os
 from streamlit_gsheets import GSheetsConnection
 
 # --- 1. SETUP ---
-SONNET_MODEL = "claude-sonnet-4-20250514"
-HAIKU_MODEL = "claude-haiku-4-5-20251001"
+# Sonnet 4.6 handles baseline synthesis (strong reasoning + adaptive thinking, cost-efficient).
+# Opus 4.7 handles refinement — when the tech is stuck mid-session and needs the deepest
+# reasoning to escape a loop or diagnose an unusual combination, this is where it matters most.
+BASELINE_MODEL = "claude-sonnet-4-6"
+REFINEMENT_MODEL = "claude-opus-4-7"
 
 # Behavioral rules shared by BOTH models so guidance and tone stay consistent.
 SHARED_RULES = """
-CHANGE SIZING: Match the size of each change to how far the image is from acceptable. Use small ~5-10% steps to fine-tune a nearly-correct image, but make ONE decisive, correctly-sized move when the image is clearly off — do not under-correct out of caution. The only hard limit is safety: never make a jump that risks clipping highlights/shadows or pushing the sensor toward saturation.
-HARDWARE & BINNING DISCIPLINE: This is a post-capture SOFTWARE tool. Do NOT default to changing exposure time or enabling 2x2 Binning when a fix is hard to find or when several refinements have been tried. Recommend an exposure-time change ONLY for genuine under/over-exposure or saturation (verified against quick_guide ranges); recommend 2x2 Binning ONLY for a weak X-ray source or diagnosed sensor fatigue. Otherwise work the software ladder first: AN -> CLAHE -> Gamma -> Sharpening -> Contrast/Brightness (last resort).
+CHANGE SIZING: Match the size of each change to how far the image is from acceptable. Use small ~5-10% steps to fine-tune a nearly-correct image, but make ONE decisive, correctly-sized move when the image is clearly off — do not under-correct out of caution. Boundary values are LEGITIMATE and often correct: HP=100, LP=0, Gamma=0.35 or 0.85, CLAHE Regions 2x2 or 8x8, Sharpen Weight 2.00. Do NOT shy from extremes when the diagnosis calls for them. The only hard limit is safety: never make a jump that risks clipping highlights/shadows or pushing the sensor toward saturation.
+
+ANTI-LOOP / NON-REGRESSION: In a refinement turn, inspect every prior attempt in this session BEFORE recommending changes. If a setting was already adjusted in an earlier round, do NOT revert it without strong cause — that creates oscillation loops where the tech ends up back where they started. After two rounds in the same direction without resolution, STOP repeating the same parameters. Step back, re-diagnose the root cause, and propose a fundamentally different approach — a different escalation tier, a hardware re-check, or a re-analysis of which symptom is actually the underlying problem. Acknowledge the loop in your CAUSE line if you are breaking out of one.
+
+ADAPTIVE NORMALIZATION PERCENTILES — CORRECT MECHANIC: HP and LP are CUTOFF POINTS, not "amounts to remove."
+- HP=N preserves brightness data up to the Nth percentile; the top (100-N)% is clipped. HP=100 keeps ALL bright detail (brightest image, full highlight gradation). HP=99 trims top 1%. HP=95 trims top 5% (noticeably darker, significant bright detail lost).
+- LP=N preserves dark data above the Nth percentile; the bottom N% is clipped. LP=0 keeps ALL dark detail. LP=1 trims darkest 1%. LP=5 trims darkest 5% (cleaner shadows, lost dark gradation).
+- For a TOO-DARK image, the first AN move is usually RAISE HP toward 100. For genuinely over-exposed / blown-out highlights, LOWER HP toward 95-97 to clip the bad data.
+
+HARDWARE & BINNING DISCIPLINE: This is a post-capture SOFTWARE tool. Do NOT default to changing exposure time or enabling 2x2 Binning when stuck. Recommend an exposure-time change ONLY for genuine under/over-exposure or saturation (verified against quick_guide ranges); recommend 2x2 Binning ONLY for a weak X-ray source or diagnosed sensor fatigue. Otherwise work the software ladder first: AN -> CLAHE -> Gamma -> Sharpening -> Contrast/Brightness.
+
+CONTRAST & BRIGHTNESS: Lower priority than the data-preserving software ladder, and you should prefer AN / CLAHE / Gamma / Sharpening first because Contrast and Brightness modify linear display values rather than the underlying pixel data. HOWEVER, they are LEGITIMATE TOOLS — NOT banned. Use them when the ladder has been worked and further adjustment would help, particularly Contrast, which can produce real perceived-detail improvement even on already-optimized data. Recommend them when they would meaningfully improve diagnostic perception. Do not treat them as untouchable.
+
 CLAHE: Whenever you adjust CLAHE, you MUST specify BOTH Clip Limit AND Num Regions X/Y (range 2-8, i.e. 2x2 to 8x8). Use finer grids (7x7-8x8) for trabecular/PDL/perio detail; coarser grids (2x2-4x4) for broad, smooth contrast. Never omit Num Regions.
+
 EXPOSURE UNITS: Exposure may be given in seconds, milliseconds, a fraction (1/n s), or pulses (1 pulse = 1/60 s = 0.0167 s). If you recommend an exposure change, express it in the SAME unit the technician is using (e.g. "+1 pulse -> 7 pulses = ~0.117 s", "shorten to 1/10 s"). Convert the second-based quick_guide ranges into that unit first.
+
 GAMMA: Lower Gamma = brighter mid-tones; higher Gamma = darker mid-tones. Range 0.35-0.85 (capped at 0.85).
 """
 
@@ -79,7 +95,7 @@ RULES:
 - Match the diagnostic goal to the correct recipe from quick_guide.txt.
 - Verify parameter combinations against the interaction matrix in sensor_model.txt.
 - Radiopaque (bone/enamel) = White. Radiolucent (air/decay) = Black.
-- Never suggest Contrast/Brightness unless it is a last resort.
+- Contrast/Brightness are lower priority than AN/CLAHE/Gamma/Sharpening but are LEGITIMATE — recommend them when they would meaningfully improve diagnostic perception (especially Contrast), not as untouchable last resorts.
 {SHARED_RULES}
 
 OUTPUT — return EXACTLY this structure, nothing else:
@@ -92,8 +108,8 @@ NOTES: [Goal optimized for, plus any one-line caution. Keep it brief.]
 """
     try:
         response = client.messages.create(
-            model=SONNET_MODEL,
-            max_tokens=500,
+            model=BASELINE_MODEL,
+            max_tokens=600,
             messages=[{"role": "user", "content": prompt}]
         )
         return response.content[0].text.strip()
@@ -102,21 +118,44 @@ NOTES: [Goal optimized for, plus any one-line caution. Keep it brief.]
 
 def get_ai_refinement(software, machine, hardware_specs, diagnostic_goal,
                       current_baseline, refinement_history, new_feedback, knowledge):
-    # Build prior-attempt context so AI knows what has already been tried
+    # Build prior-attempt context so the AI cannot ignore what has already been tried.
+    # This block is given visual prominence and is positioned at the TOP of the prompt
+    # because oscillation loops are the failure mode it must prevent.
+    attempt_num = len(refinement_history) + 1
     history_block = ""
     if refinement_history:
-        history_block = "PREVIOUS ATTEMPTS (do NOT repeat these unless the tech confirms they were not applied):\n"
+        history_block = (
+            "═══ PREVIOUS ATTEMPTS IN THIS SESSION — READ CAREFULLY BEFORE RECOMMENDING ═══\n"
+            f"This is attempt #{attempt_num}. The prior attempts below already changed settings. "
+            "Before recommending anything new, identify which settings have already been touched. "
+            "Do NOT revert them without strong cause, and do NOT re-suggest parameters that have "
+            "already been tried — that produces oscillation loops.\n"
+        )
         for i, entry in enumerate(refinement_history, 1):
-            history_block += f"\nAttempt {i}:\n  Issue: {entry['feedback']}\n  Advice given: {entry['response']}\n"
+            history_block += (
+                f"\n--- Attempt {i} ---\n"
+                f"Issue raised: {entry['feedback']}\n"
+                f"Advice given:\n{entry['response']}\n"
+            )
+        if attempt_num >= 3:
+            history_block += (
+                "\n⚠ THIS IS ATTEMPT #" + str(attempt_num) + ". Two or more rounds have already failed to resolve the issue. "
+                "Do NOT propose the same parameters again. Step back, re-diagnose the root cause, "
+                "and recommend a fundamentally different approach (different tier, hardware re-check, "
+                "or re-analysis of which symptom is actually the problem). Acknowledge in your CAUSE "
+                "line that you are breaking out of the prior pattern.\n"
+            )
+        history_block += "\n═══ END OF PRIOR ATTEMPTS ═══\n"
 
     prompt = f"""
-You are a Dental Imaging Specialist. Give a short, direct answer — cause and changes only.
+You are a Senior Dental Imaging Specialist. The technician is mid-session with a client; your job is to actually reason through the problem and produce a fix that works, not just satisfy the output format. Give a short, direct answer — cause and changes only.
+
+{history_block}
+
 Setup: {software} | {machine}
 Hardware: {hardware_specs}
 Diagnostic Goal: {diagnostic_goal}
 Current Baseline: {current_baseline}
-
-{history_block}
 
 NEW ISSUE: {new_feedback}
 
@@ -125,13 +164,14 @@ KNOWLEDGE BASE:
 
 REASONING (do this silently — do NOT write out the steps in your answer):
 - Check sensor saturation from sensor_model.txt.
-- Map symptom to differential_diagnosis.txt categories A-G. Find root cause.
-- Follow escalation order: hardware first, then AN, CLAHE, Gamma, Sharpening, Contrast/Brightness last.
+- Map symptom to differential_diagnosis.txt categories A-G. Find the actual root cause, not just the surface symptom.
+- Follow escalation order: hardware first only if truly warranted, then AN, CLAHE, Gamma, Sharpening, then Contrast/Brightness (lower priority but not forbidden).
 - Check parameter interaction matrix in sensor_model.txt Section 5.
+- Cross-check prior attempts above. If you are about to recommend a change that was already tried (or that would revert a previous change), STOP and choose a different approach.
 {SHARED_RULES}
 
 OUTPUT — return EXACTLY this structure, nothing more, nothing less:
-CAUSE: [One sentence maximum.]
+CAUSE: [One sentence maximum. If breaking out of a prior loop, acknowledge it here.]
 SETTINGS:
 - [Setting]: [old value] → [new value]
 - [Setting]: [old value] → [new value]
@@ -144,8 +184,8 @@ LOG_SETTINGS:[SettingName: Value, SettingName: Value, SettingName: Value]
 """
     try:
         response = client.messages.create(
-            model=HAIKU_MODEL,
-            max_tokens=500,
+            model=REFINEMENT_MODEL,
+            max_tokens=800,
             messages=[{"role": "user", "content": prompt}]
         )
         return response.content[0].text.strip()
