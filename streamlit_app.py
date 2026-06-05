@@ -7,7 +7,6 @@ from streamlit_gsheets import GSheetsConnection
 # --- 1. SETUP ---
 # Sonnet 4.6 handles baseline synthesis (strong reasoning + adaptive thinking, cost-efficient).
 # Opus 4.7 handles refinement — when the tech is stuck mid-session and needs the deepest
-# reasoning to escape a loop or diagnose an unusual combination, this is where it matters most.
 BASELINE_MODEL = "claude-sonnet-4-6"
 REFINEMENT_MODEL = "claude-opus-4-7"
 
