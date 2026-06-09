@@ -39,11 +39,13 @@ The technician workflow:
 
 1. **Setup** — Select the imaging software, X-ray source (wall-mount or hand-held), and diagnostic goal. Enter hardware settings (kVp, mA, exposure time in the unit the machine uses — seconds, milliseconds, fraction `1/n s`, or pulses).
 1. **Generate Baseline** — Click the button to have the AI synthesize a recommended starting configuration from physics knowledge, past successful calibrations for this software/machine pair, and the diagnostic recipe.
+
+#### Screenshot
+<img src="images/Screenshot2026-06-09.png" width="500">
+
 1. **Refine** — If the client is not happy, describe the problem in plain language (“bone looks washed out,” “image is too grainy”). The AI returns a short, direct response: likely cause, parameter changes, one-line risk note.
 1. **Chain refinements** — Each new feedback round preserves history. The AI sees what has already been tried, does not repeat advice, and at attempt #3+ is required to propose a fundamentally different approach if prior rounds have not resolved the issue.
 1. **Log** — When the client is happy, log the session. The software, machine, issue tag, final settings, and tech notes are appended to Google Sheets and feed future baselines for the same setup.
-
-images/Screenshot 2026-06-09 080524.png
 
 -----
 
