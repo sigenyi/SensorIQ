@@ -243,7 +243,7 @@ except Exception:
     df_history = pd.DataFrame(columns=['machine', 'software', 'issue', 'settings', 'notes'])
 
 # --- 4. UI CONFIG ---
-st.set_page_config(page_title="Jazz AI Image Quality", page_icon="🦷")
+st.set_page_config(page_title="AI Image Quality", page_icon="🦷")
 st.markdown("""
 <style>
 div[data-testid="stTextArea"] textarea {
@@ -261,7 +261,7 @@ div[data-testid="stTextArea"] textarea {
 </style>
 """, unsafe_allow_html=True)
 
-st.title("🦷 Jazz AI Image Quality Assistant")
+st.title("🦷 AI Image Quality Assistant")
 
 # --- 5. SIDEBAR ---
 st.sidebar.header("Initial Setup")
@@ -326,7 +326,7 @@ diagnostic_goal = st.sidebar.selectbox(
 )
 
 st.sidebar.markdown("---")
-st.sidebar.caption("v2.1.0 | Jazz AI Support")
+st.sidebar.caption("v2.2.0 | SensorIQ")
 
 # --- 6. MAIN ---
 if software == "Select..." or machine == "Select...":
