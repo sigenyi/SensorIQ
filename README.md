@@ -43,6 +43,8 @@ The technician workflow:
 1. **Chain refinements** — Each new feedback round preserves history. The AI sees what has already been tried, does not repeat advice, and at attempt #3+ is required to propose a fundamentally different approach if prior rounds have not resolved the issue.
 1. **Log** — When the client is happy, log the session. The software, machine, issue tag, final settings, and tech notes are appended to Google Sheets and feed future baselines for the same setup.
 
+images/Screenshot 2026-06-09 080524.png
+
 -----
 
 ## Tech stack
