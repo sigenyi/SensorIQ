@@ -1,4 +1,4 @@
-# SensorIQ — Jazz AI Image Quality Assistant
+# SensorIQ — AI Image Quality Assistant
 
 A Streamlit web application that helps dental imaging technicians configure the post-capture software settings of the Jazz CMOS X-ray sensor so the final radiograph is diagnostically usable for the dentist and acceptable to the client.
 
