@@ -1,3 +1,13 @@
+## [2.2.0] — Last last updated 2026-05-28
+
+knowledge/settings_guide.txt and knowledge/differential_diagnosis.txt
+carried pre-v2.2.0 text describing HP/LP as "amount removed" rather than
+cutoff points, contradicting SHARED_RULES in streamlit_app.py.
+
+load_technical_manuals() reads only from knowledge/, so the corrected
+root-level copies never reached the prompt. Root duplicates removed to
+prevent recurrence.
+
 ## [2.1.0] — Last updated 2026-05-28
 
 Multi-phase release: UX overhaul (manual control, refinement chain, durable parsing), knowledge-base correction pass, new exposure-unit handling, and behavioral rewrites for more decisive, consistent recommendations.
