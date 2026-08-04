@@ -38,7 +38,7 @@ and readable according to the criteria below. Match the criteria to the diagnost
 - SOFTWARE OPTIMIZATION:
   - Sharpening Sigma: 3.0-5.0 (enough radius to detect the thin structure)
   - Sharpening Weight: 0.75-1.0 (enough emphasis to make it distinct)
-  - Gamma: 0.55-0.65 (lifts shadows to reveal the dark PDL line)
+  - Gamma: 0.65-0.75 (lifts shadows to reveal the dark PDL line)
   - S-Curve: 0.70-0.85 (Soft Clip re-introduces tail data where PDL lives)
 - FAILURE MODE: PDL line not visible or continuous → image insufficient for perio diagnosis.
 
@@ -89,8 +89,8 @@ and readable according to the criteria below. Match the criteria to the diagnost
 |----------------------|---------------------------|------------------------------------|
 | Caries detection     | Enamel contrast, Dentin   | Low kVp (60-65), High CLAHE        |
 | Perio bone levels    | Alveolar crest, LD, Trab. | High kVp (70+), CLAHE, Gamma ~0.65 |
-| Endo (root canal)    | Apex, Canal, PDL space    | Gamma 0.5, High Sigma sharpening   |
-| Fracture detection   | PDL space, Crown cracks   | S-Curve 0.85-0.90, Gamma 0.40-0.50 |
+| Endo (root canal)    | Apex, Canal, PDL space    | Gamma 0.80, High Sigma sharpening  |
+| Fracture detection   | PDL space, Crown cracks   | S-Curve 0.85-0.90, Gamma 0.75-0.85 |
 | Post-op / healing    | Trabecular pattern        | Balanced: CLAHE 2.0, Gamma 0.65    |
 
 ---

@@ -22,12 +22,12 @@
 
 # DIAGNOSTIC RECIPES
 - Recipe A (Caries): 60-65 kVp | CLAHE 2.5 | Sharpen Weight 2.0 | Gamma 0.8.
-- Recipe B (Endo): Gamma 0.5 (lifts shadows) | Sharpen Sigma 5.0.
+- Recipe B (Endo): Gamma 0.80 (lifts shadows) | Sharpen Sigma 5.0.
 - Recipe C (Perio): 70+ kVp | Disable S-Curve | Sharpen Weight 1.0.
 - Recipe D (Fracture Hunter): 
     Goal: Visualize hairline cracks.  
     Step 1: Increase S-Curve Scale to 0.85 - 0.90 to re-introduce the "raw" tail data.  
-    Step 2: Lower Gamma to 0.40 - 0.50 to lift mid-tones and shadow detail (lower Gamma = brighter), revealing the re-introduced tail data so the structural breaks in the tooth become more apparent.
+    Step 2: Raise Gamma to 0.75 - 0.85 to lift mid-tones and shadow detail (higher Gamma = brighter), revealing the re-introduced tail data so the structural breaks in the tooth become more apparent.
 
 # TROUBLESHOOTING LOGIC
 Issue: Grainy/Pixelated:

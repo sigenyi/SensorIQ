@@ -1,3 +1,23 @@
+## [2.2.1] — Last updated 2026-08-03
+
+**Gamma direction bug fixed — v2.1.0's "standardization" was backwards.**
+The v2.1.0 changelog entry claiming to standardize Gamma to "lower = brighter"
+across the KB was itself the bug: it codified the opposite of how the Jazz
+Gamma control actually behaves. Corrected to the standard convention —
+**higher Gamma = brighter mid-tones, lower Gamma = darker mid-tones** — in
+`streamlit_app.py` (SHARED_RULES), `knowledge/settings_guide.txt`,
+`knowledge/differential_diagnosis.txt` (A4/B4 entries and the Tier 4
+escalation-ladder line), `knowledge/sensor_model.txt` (interaction risk
+matrix), `knowledge/radiography_guide.txt` (mechanical-adjustment and
+diagnostic-decision-matrix logic), `knowledge/quick_guide.txt` (Recipe B and
+Recipe D), and `knowledge/success_criteria.txt` (PDL, Endo, and Fracture
+recipe entries). Recipe Gamma values tied to a "brighten/lift shadows" or
+"darken" claim were mirrored across the 0.65 baseline so the stated effect
+still matches the value (e.g. Endo's "Gamma 0.5, lifts shadows" is now
+"Gamma 0.80, lifts shadows"). `iq_settings.csv` (raw historical technician
+logs) was left untouched since it records observed real-world settings, not
+directional logic.
+
 ## [2.2.0] — Last last updated 2026-05-28
 
 knowledge/settings_guide.txt and knowledge/differential_diagnosis.txt

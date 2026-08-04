@@ -64,7 +64,7 @@ Contrast & Brightness: Lower priority than the data-preserving software ladder a
 - Weight: Sharpening strength. Range [0.55 - 2.00]; Default: 0.65. (High weights up to 2.00 are used for aggressive edge work, e.g. the Caries recipe.)
 
 # 5. GAMMA & MANUAL ADJUSTMENTS
-- Gamma Level: Mid-tone luminance. Range [.35 - .85]; Default: 0.65. DIRECTION: Lower value = BRIGHTER mid-tones; higher value = DARKER mid-tones. The entire range is below 1.0 and the control is capped at 0.85, so Gamma can brighten strongly but can only darken toward neutral — it cannot fully darken a heavily over-penetrated image on its own.
+- Gamma Level: Mid-tone luminance. Range [.35 - .85]; Default: 0.65. DIRECTION: Higher value = BRIGHTER mid-tones; lower value = DARKER mid-tones. The entire range is below 1.0 and the control is capped at 0.85, so Gamma can darken strongly but can only brighten toward neutral — it cannot fully brighten a heavily under-exposed image on its own.
 - Manual Contrast: Range [0.00 - 0.10]; Default: 0.00.
 - Manual Brightness: Range [-0.10 - 0.10]; Default: 0.00.
 

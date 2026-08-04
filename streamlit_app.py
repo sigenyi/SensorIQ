@@ -29,7 +29,7 @@ CLAHE: Whenever you adjust CLAHE, you MUST specify BOTH Clip Limit AND Num Regio
 
 EXPOSURE UNITS: Exposure may be given in seconds, milliseconds, a fraction (1/n s), or pulses (1 pulse = 1/60 s = 0.0167 s). If you recommend an exposure change, express it in the SAME unit the technician is using (e.g. "+1 pulse -> 7 pulses = ~0.117 s", "shorten to 1/10 s"). Convert the second-based quick_guide ranges into that unit first.
 
-GAMMA: Lower Gamma = brighter mid-tones; higher Gamma = darker mid-tones. Range 0.35-0.85 (capped at 0.85).
+GAMMA: Higher Gamma = brighter mid-tones; lower Gamma = darker mid-tones. Range 0.35-0.85 (capped at 0.85).
 """
 
 try:
